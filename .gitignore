@@ -1,0 +1,54 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+server.cfg
+secrets.cfg
+config/*.cfg
+!config/*.example.cfg
+
+# FiveM / FXServer runtime data
+/txData/
+/cache/
+/logs/
+/crashes/
+*.log
+*.dmp
+*.mdmp
+
+# Downloaded FXServer artifacts and binaries
+/artifacts/
+/fxserver/
+/server-files/
+/server-binaries/
+/server/
+/FXServer
+/FXServer.exe
+/run.sh
+/citizen/
+/alpine/
+/components.json
+
+# Dependency/build outputs
+node_modules/
+dist/
+build/
+.cache/
+tmp/
+temp/
+
+# Database exports with private data
+database/dumps/
+database/*.local.sql
+database/*.dump
+database/*.backup
+*.sql.gz
+*.sql.zip
+
+# Editor and OS metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
