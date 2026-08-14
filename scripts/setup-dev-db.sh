@@ -30,6 +30,25 @@ require_name() {
   fi
 }
 
+version_ge_10_9() {
+  local raw="$1"
+  local core major minor patch
+  core="${raw%%-*}"
+  core="${core%%+*}"
+  IFS=. read -r major minor patch <<EOF
+$core
+EOF
+  major="${major:-0}"
+  minor="${minor:-0}"
+  patch="${patch:-0}"
+
+  [[ "$major" =~ ^[0-9]+$ ]] || return 1
+  [[ "$minor" =~ ^[0-9]+$ ]] || return 1
+  [[ "$patch" =~ ^[0-9]+$ ]] || patch=0
+
+  [ "$major" -gt 10 ] || { [ "$major" -eq 10 ] && [ "$minor" -ge 9 ]; }
+}
+
 update_env_var() {
   local key="$1"
   local value="$2"
@@ -126,6 +145,12 @@ SQL
 
 MYSQL_PWD="$DB_PASSWORD" "$MYSQL" --protocol=tcp --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" "$DB_NAME" \
   --batch --skip-column-names --execute "SELECT DATABASE(), CURRENT_USER();" >/dev/null
+
+SERVER_VERSION="$(MYSQL_PWD="$DB_PASSWORD" "$MYSQL" --protocol=tcp --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" "$DB_NAME" \
+  --batch --skip-column-names --execute "SELECT VERSION();" 2>/dev/null || true)"
+if [[ "$SERVER_VERSION" != *MariaDB* ]] || ! version_ge_10_9 "$SERVER_VERSION"; then
+  printf 'Warning: Qbox runtime requires MariaDB 10.9.0+; this server reports "%s".\n' "${SERVER_VERSION:-unknown}"
+fi
 
 PUBLIC_TEST_GRANTS="$(mysql_admin --batch --skip-column-names --execute "SELECT COUNT(*) FROM mysql.db WHERE User = '' AND Db IN ('test', 'test\\\\_%');" 2>/dev/null || true)"
 if [ "${PUBLIC_TEST_GRANTS:-0}" != "0" ]; then

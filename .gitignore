@@ -4,6 +4,10 @@
 !.env.example
 server.cfg
 secrets.cfg
+permissions.cfg
+ox.cfg
+voice.cfg
+misc.cfg
 config/*.cfg
 !config/*.example.cfg
 
@@ -28,6 +32,7 @@ config/*.cfg
 /citizen/
 /alpine/
 /components.json
+/myLogo.png
 
 # Dependency/build outputs
 node_modules/

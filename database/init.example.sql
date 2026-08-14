@@ -1,6 +1,7 @@
--- Example-only MariaDB/MySQL initialization for local development.
+-- Example-only MariaDB initialization for local development.
 -- Replace CHANGE_ME_STRONG_LOCAL_PASSWORD before running manually.
 -- Prefer scripts/setup-dev-db.sh on this workstation so secrets stay in .env.
+-- Qbox runtime hosts must use MariaDB 10.9.0 or newer.
 
 CREATE DATABASE IF NOT EXISTS `tarrant_rp_dev`
   CHARACTER SET utf8mb4

@@ -17,13 +17,13 @@ scripts/            Repeatable local development checks/setup
 ## Prerequisites
 
 - Git
-- MariaDB or MySQL
+- MariaDB 10.9.0 or newer for Qbox runtime
 - Node.js/npm for future framework and resource tooling
 - A Cfx.re account and development server license key
 - A supported FXServer host: Windows or Linux
 - Latest recommended FiveM FXServer artifact from the official Cfx.re Server Download page
 
-This workstation is macOS ARM64. Use it for repository and database preparation, but run FXServer itself on Windows or Linux.
+This workstation is macOS ARM64. Use it for repository preparation only; run FXServer itself on Windows or Linux. The local XAMPP MariaDB detected during Week 1 is below Qbox's current minimum and is not suitable for playable Qbox testing.
 
 ## First-Time Setup
 
@@ -46,9 +46,15 @@ scripts/setup-dev-db.sh
 scripts/check-env.sh
 ```
 
+10. On the Windows/Linux runtime host, verify Qbox readiness:
+
+```bash
+scripts/check-qbox-readiness.sh
+```
+
 ## FXServer
 
-See `docs/fxserver.md` for official Cfx.re links, platform notes, and startup examples. Do not commit downloaded FXServer artifacts, txAdmin runtime data, cache, or logs.
+See `docs/fxserver.md` and `docs/week1-runtime.md` for official Cfx.re/Qbox links, platform notes, and startup examples. Do not commit downloaded FXServer artifacts, txAdmin runtime data, cache, or logs.
 
 ## Database
 
@@ -58,7 +64,7 @@ Default local development database settings:
 - User: `tarrant_rp`
 - Host: `127.0.0.1` / `localhost`
 
-The application user receives privileges only on the project database.
+The application user receives project-created privileges only on the project database. Some local XAMPP installs expose a public `test` schema through default anonymous grants; harden shared database hosts before runtime testing.
 
 ## Security
 

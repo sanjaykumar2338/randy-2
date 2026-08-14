@@ -18,6 +18,8 @@ The official setup flow is:
 
 This workstation is macOS ARM64. Cfx.re documents FXServer setup paths for Windows and Linux, but not native macOS, so FXServer was not installed or started here.
 
+Qbox also requires MariaDB 10.9.0 or newer and explicitly does not support XAMPP. Use a supported MariaDB package on the runtime host.
+
 Suggested local layout on a supported host:
 
 ```text

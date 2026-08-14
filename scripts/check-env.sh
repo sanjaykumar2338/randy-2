@@ -33,6 +33,25 @@ status_fail() {
   exit 1
 }
 
+version_ge_10_9() {
+  local raw="$1"
+  local core major minor patch
+  core="${raw%%-*}"
+  core="${core%%+*}"
+  IFS=. read -r major minor patch <<EOF
+$core
+EOF
+  major="${major:-0}"
+  minor="${minor:-0}"
+  patch="${patch:-0}"
+
+  [[ "$major" =~ ^[0-9]+$ ]] || return 1
+  [[ "$minor" =~ ^[0-9]+$ ]] || return 1
+  [[ "$patch" =~ ^[0-9]+$ ]] || patch=0
+
+  [ "$major" -gt 10 ] || { [ "$major" -eq 10 ] && [ "$minor" -ge 9 ]; }
+}
+
 cd "$ROOT_DIR"
 
 status_ok "Repository root: $ROOT_DIR"
@@ -86,6 +105,14 @@ if [ -f "$ENV_FILE" ]; then
     --batch --skip-column-names --execute "SELECT DATABASE(), CURRENT_USER();" >/dev/null \
     && status_ok "Database connectivity verified for $DB_USER@$DB_HOST/$DB_NAME" \
     || status_fail "Database connectivity failed for configured application user"
+
+  SERVER_VERSION="$(MYSQL_PWD="$DB_PASSWORD" "$MYSQL" --protocol=tcp --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" "$DB_NAME" \
+    --batch --skip-column-names --execute "SELECT VERSION();" 2>/dev/null || true)"
+  if [[ "$SERVER_VERSION" == *MariaDB* ]] && version_ge_10_9 "$SERVER_VERSION"; then
+    status_ok "MariaDB version satisfies Qbox minimum: $SERVER_VERSION"
+  else
+    status_warn "Qbox requires MariaDB 10.9.0+; this server reports ${SERVER_VERSION:-unknown}"
+  fi
 
   if MYSQL_PWD="$DB_PASSWORD" "$MYSQL" --protocol=tcp --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" \
     --batch --skip-column-names --execute "SHOW DATABASES LIKE 'test';" | grep -q '^test$'; then
