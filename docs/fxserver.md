@@ -1,46 +1,67 @@
 # FXServer Development Notes
 
-FXServer server binaries are intentionally not stored in this repository. Keep downloaded artifacts and txAdmin runtime data outside Git, then point the server at this repository as the server-data/config workspace.
+The Windows Week 1 runtime uses the recommended FXServer build `25770` that was current when it was staged. Its archive and extracted binaries are ignored rather than committed.
 
-The official Cfx.re setup references are:
+Official references:
 
-- [Setting up a FiveM Server](https://docs.fivem.net/docs/getting-started/setup-fivem-server/)
-- [Setting Up a Vanilla FXServer](https://docs.fivem.net/docs/server-manual/setting-up-a-server-vanilla/)
+- [Setting up a FiveM server](https://docs.fivem.net/docs/getting-started/setup-fivem-server/)
+- [Setting up a vanilla FXServer](https://docs.fivem.net/docs/server-manual/setting-up-a-server-vanilla/)
+- [txAdmin documentation](https://docs.fivem.net/docs/resources/txAdmin/)
 - [Windows artifacts](https://runtime.fivem.net/artifacts/fivem/build_server_windows/master/)
 - [Linux artifacts](https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/)
 
-The official setup flow is:
+## Local Windows Layout
 
-1. Download the latest recommended FiveM server artifact from the official Server Download page.
-2. Extract the artifact into a dedicated binary directory outside the repository.
-3. Start FXServer and use bundled txAdmin at `http://localhost:40120`.
-4. Link a Cfx.re account and enter a development license key in local, ignored config.
-
-This workstation is macOS ARM64. Cfx.re documents FXServer setup paths for Windows and Linux, but not native macOS, so FXServer was not installed or started here.
-
-Qbox also requires MariaDB 10.9.0 or newer and explicitly does not support XAMPP. Use a supported MariaDB package on the runtime host.
-
-Suggested local layout on a supported host:
+All generated/downloaded paths are ignored by Git:
 
 ```text
-~/FXServer/
-  server/       # downloaded artifacts, not committed
-  txData/       # txAdmin runtime data, not committed
-  server-data/  # clone of this repository
+randy-2/
+  fxserver/                  # build 25770, including FXServer.exe
+  runtime/qbox-server-data/ # staged existing server-data
+  runtime/*.log             # local setup/startup evidence
+  txData/                   # txAdmin profiles and credentials
 ```
 
-Linux example:
+The repository root on the staged workstation is `C:\xampp\htdocs\myworkplace\randy-2`.
 
-```bash
-cd ~/FXServer/server-data
-bash ~/FXServer/server/run.sh +exec config/server.cfg
-```
+txAdmin is bundled with FXServer; no separate txAdmin download is required. It was smoke-tested with its interface restricted to loopback and returned HTTP 200 at `http://127.0.0.1:40120`.
 
-Windows example:
+Start the txAdmin host from the repository root with the Windows helper:
 
 ```powershell
-cd C:\FXServer\server-data
-C:\FXServer\server\FXServer.exe +exec config\server.cfg
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-txadmin.ps1
 ```
 
-For first-run txAdmin setup, start FXServer without `+exec config/server.cfg`, then complete the browser setup and keep generated secrets out of Git.
+The helper sets current `TXHOST_*` values for loopback-only txAdmin/game ports, uses ignored `txData/`, protects local txAdmin/log ACLs, and waits for HTTP readiness. This starts txAdmin, not a verified Qbox gameplay session. Do not bind txAdmin publicly for local development.
+
+## First-Run Onboarding
+
+Retrieve the current one-time PIN locally without copying it into chat:
+
+```powershell
+Select-String -LiteralPath .\runtime\fxserver.stdout.log -Pattern 'Use this PIN' | Select-Object -Last 1
+```
+
+Open `http://127.0.0.1:40120`, enter that PIN, link the intended Cfx.re account, set the local backup password, and supply a development server license key through ignored local configuration. Account linking, key issuance, and browser confirmation cannot be automated safely. Treat both the PIN and license key as secrets.
+
+The Qbox files and database schema are already staged. In txAdmin's deployer, choose the existing-server-data workflow, use `C:\xampp\htdocs\myworkplace\randy-2\runtime\qbox-server-data` as the data directory, and select `server.cfg`. Do not deploy the official Qbox recipe into `tarrant_rp_dev`: a second recipe import can collide with previously seeded rows.
+
+Before starting the server profile, refresh ignored configuration after placing the key in `.env`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-qbox-runtime.ps1 -ConfigureOnly
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-qbox-readiness.ps1
+```
+
+The generated runtime `server.cfg` binds the game endpoint to `127.0.0.1:30120`, enables OneSync, loads secrets from ignored `development.cfg`, and starts the minimum resources in explicit dependency order.
+
+## Cross-Platform Reference
+
+For a separate Linux host, download the current recommended Linux artifact and keep its binaries/runtime data outside Git. A direct vanilla startup looks like:
+
+```bash
+cd /path/to/server-data
+/path/to/fxserver/run.sh +exec server.cfg
+```
+
+Use the current official artifact list rather than assuming Windows build `25770` is still recommended for a future rebuild.

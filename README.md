@@ -1,83 +1,78 @@
 # Tarrant RP
 
-Commercial FiveM lifestyle/economy RP server foundation for a future Qbox installation.
+Commercial FiveM lifestyle/economy RP server foundation built on Qbox.
 
-This repository currently contains local development structure, configuration templates, database setup helpers, and security hygiene only. Qbox and gameplay systems are intentionally not installed yet.
+The Windows 11 AMD64 Week 1 server runtime is operational, but it is not yet gameplay-verified. The supported standalone database, FXServer, txAdmin profile, and minimum pinned Qbox-derived server-data tree are running locally. FiveM client installation and the in-game acceptance tests still require manual account/client interaction.
 
-## Structure
+## Current Windows Runtime
+
+- Repository root: `C:\xampp\htdocs\myworkplace\randy-2`
+- MariaDB 12.3.2 runs as the automatic Windows service `TarrantMariaDB`, bound to `127.0.0.1:3306`.
+- Database `tarrant_rp_dev` and dedicated application user `tarrant_rp` are configured; credentials remain only in the ignored local `.env`.
+- FXServer recommended build `25770` is extracted under ignored `fxserver/`.
+- Bundled txAdmin is configured and reachable only on `127.0.0.1:40120`.
+- A minimum official-release Qbox stack runs under ignored `runtime/qbox-server-data/`; its required resources, oxmysql connection, and base/core/vehicle schemas are verified.
+- XAMPP is retained for unrelated local work, but its MariaDB 10.4 instance is stopped and unsupported by Qbox. Do not start XAMPP MySQL while `TarrantMariaDB` is using port 3306.
+
+Runtime verification covers downloads, manifests, configuration, dependency order, database connectivity, required resource startup, loopback endpoints, and a controlled server restart. Character, inventory, money, reconnect, and persistence flows still require a FiveM client test.
+
+## Repository Layout
 
 ```text
-config/             Example FXServer config files
-database/           Local database setup documentation and SQL template
-docs/               FXServer platform/setup notes
-resources/[tarrant]/ Project-specific future custom resources
-scripts/            Repeatable local development checks/setup
+config/              Tracked, secret-free FXServer configuration examples
+database/            Database documentation and SQL template
+docs/                Windows runtime notes and Week 1 acceptance material
+resources/[tarrant]/ Project-owned resources copied into the staged runtime
+scripts/             PowerShell automation plus secondary Unix helpers
+fxserver/            Ignored downloaded FXServer binaries
+runtime/             Ignored recipes, server-data, manifests, and logs
+txData/              Ignored txAdmin state
 ```
 
 ## Prerequisites
 
-- Git
-- MariaDB 10.9.0 or newer for Qbox runtime
-- Node.js/npm for future framework and resource tooling
+- Windows 11 AMD64, Git, and Windows PowerShell 5.1 or newer
+- Standalone MariaDB 10.9 or newer; MariaDB 12.3 LTS is the current Qbox recommendation
 - A Cfx.re account and development server license key
-- A supported FXServer host: Windows or Linux
-- Latest recommended FiveM FXServer artifact from the official Cfx.re Server Download page
+- A licensed GTA V installation and FiveM client for gameplay testing
+- Node.js/npm only when rebuilding resource web assets; the staged releases are prebuilt
 
-This workstation is macOS ARM64. Use it for repository preparation only; run FXServer itself on Windows or Linux. The local XAMPP MariaDB detected during Week 1 is below Qbox's current minimum and is not suitable for playable Qbox testing.
+Qbox explicitly does not support XAMPP as its runtime database.
 
-## First-Time Setup
+## Windows Commands
 
-1. Clone this repository.
-2. Copy `.env.example` to `.env`, or run `scripts/setup-dev-db.sh` to create it with a generated local DB password.
-3. Create the local database and dedicated application user:
+The workstation execution policy is restricted, so invoke tracked scripts with an explicit per-process bypass from the repository root:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-env.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-qbox-readiness.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-txadmin.ps1
+```
+
+On a fresh Windows host, the repeatable setup entry points are:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-mariadb.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\setup-dev-db.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-qbox-runtime.ps1
+```
+
+`install-mariadb.ps1` requests Administrator approval to install/configure the Windows service. `install-qbox-runtime.ps1` is for a fresh, empty runtime destination and imports the base schemas; it deliberately refuses to overwrite the current staged tree. Do not run an official Qbox txAdmin recipe against the already-staged database because its seed SQL is not guaranteed to be idempotent.
+
+The Bash helpers remain available as secondary cross-platform database/readiness tools:
 
 ```bash
 scripts/setup-dev-db.sh
-```
-
-4. Copy `config/server.example.cfg` to an ignored local config such as `config/server.cfg`.
-5. Copy `config/development.example.cfg` to `config/development.cfg` and replace placeholder local values.
-6. Add a Cfx.re development license key only to ignored local config.
-7. Download the latest recommended FXServer artifact on a supported Windows/Linux host and keep binaries outside this repository.
-8. Start FXServer/txAdmin from the supported host and point it at this server-data repository.
-9. Verify local dependencies and database connectivity:
-
-```bash
 scripts/check-env.sh
-```
-
-10. On the Windows/Linux runtime host, verify Qbox readiness:
-
-```bash
 scripts/check-qbox-readiness.sh
 ```
 
-## FXServer
+## Next Manual Gate
 
-See `docs/fxserver.md` and `docs/week1-runtime.md` for official Cfx.re/Qbox links, platform notes, and startup examples. Do not commit downloaded FXServer artifacts, txAdmin runtime data, cache, or logs.
+Install FiveM with a licensed, updated GTA V copy on this same workstation, connect to `127.0.0.1:30120`, and complete the Week 1 gameplay/persistence test plan. The game endpoints intentionally remain loopback-only.
 
-## Database
-
-Default local development database settings:
-
-- Database: `tarrant_rp_dev`
-- User: `tarrant_rp`
-- Host: `127.0.0.1` / `localhost`
-
-The application user receives project-created privileges only on the project database. Some local XAMPP installs expose a public `test` schema through default anonymous grants; harden shared database hosts before runtime testing.
+See `docs/fxserver.md`, `docs/week1-runtime.md`, and `docs/week1-test-plan.md` for the runtime flow and acceptance criteria.
 
 ## Security
 
-Real secrets stay in ignored local files such as `.env`, `server.cfg`, `config/server.cfg`, `config/development.cfg`, and `secrets.cfg`.
-
-Never commit:
-
-- Cfx.re license keys
-- Database passwords
-- Discord credentials
-- Tebex secrets
-- Production IPs/passwords
-- Private database exports
-- FXServer binaries or generated runtime data
-
-Use example files in Git plus local secret files outside Git.
+Never commit Cfx.re keys, database/admin passwords, Discord credentials, Tebex secrets, private database exports, downloaded binaries, txAdmin state, or generated runtime data. Tracked `*.example.*` files contain placeholders only; real values belong in ignored `.env`, `development.cfg`, or txAdmin files.

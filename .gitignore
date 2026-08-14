@@ -44,11 +44,16 @@ temp/
 
 # Database exports with private data
 database/dumps/
+database/init.sql
 database/*.local.sql
 database/*.dump
 database/*.backup
 *.sql.gz
 *.sql.zip
+
+# Local runtime/test evidence
+/runtime/
+/test-results/
 
 # Editor and OS metadata
 .DS_Store

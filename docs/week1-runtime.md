@@ -1,110 +1,109 @@
 # Week 1 Playable Runtime Runbook
 
-Status on this workstation: `PARTIAL`. The repo can be prepared here, but playable FXServer/Qbox testing requires a Windows or Linux runtime host with MariaDB 10.9.0 or newer.
+Status: `PARTIAL — SERVER RUNTIME HEALTHY, GAMEPLAY TESTS PENDING`.
 
-## Current Source Of Truth
+The Windows 11 AMD64 workstation has a supported database, current server binaries, a configured txAdmin profile, and a minimum Qbox-derived resource set running on local-only endpoints. Evidence covers installation, manifests, configuration, dependency order, SQL import, oxmysql connectivity, required resource startup, HTTP endpoints, and a controlled clean restart. FiveM gameplay and persistence remain untested.
 
-- Qbox docs: https://docs.qbox.re/installation
-- Qbox txAdmin recipe: https://github.com/Qbox-project/txAdminRecipe
-- Qbox stable recipe: https://github.com/Qbox-project/txAdminRecipe/blob/main/qbox-stable.yaml
-- FiveM server setup: https://docs.fivem.net/docs/getting-started/setup-fivem-server/
-- Vanilla FXServer setup: https://docs.fivem.net/docs/server-manual/setting-up-a-server-vanilla/
-- Windows artifacts: https://runtime.fivem.net/artifacts/fivem/build_server_windows/master/
-- Linux artifacts: https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/
+Repository root: `C:\xampp\htdocs\myworkplace\randy-2`.
 
-## Runtime Requirements
+## Official Sources
 
-- Windows or Linux host for FXServer.
-- MariaDB 10.9.0 or newer. Qbox recommends MariaDB 12.3 LTS for new servers.
-- Cfx.re account and development license key.
-- FiveM client installed on a separate game-capable machine.
-- Git, `curl`, an archive extractor, and a MariaDB client.
+- [Qbox installation requirements](https://docs.qbox.re/installation)
+- [Official Qbox txAdmin recipe repository](https://github.com/Qbox-project/txAdminRecipe)
+- [FiveM server setup](https://docs.fivem.net/docs/getting-started/setup-fivem-server/)
+- [Vanilla FXServer setup](https://docs.fivem.net/docs/server-manual/setting-up-a-server-vanilla/)
+- [txAdmin](https://docs.fivem.net/docs/resources/txAdmin/)
+- [Windows artifacts](https://runtime.fivem.net/artifacts/fivem/build_server_windows/master/)
+- [Linux artifacts](https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/)
 
-Do not use XAMPP for Qbox runtime testing.
+## Installed State
+
+| Area | Current local state | Verification boundary |
+| --- | --- | --- |
+| Database | Standalone MariaDB 12.3.2, service `TarrantMariaDB`, automatic start, loopback `127.0.0.1:3306` | Service/version/app-user connection and SQL import verified |
+| Legacy XAMPP | MariaDB 10.4 retained but stopped | Unsupported by Qbox; must not share port 3306 |
+| FXServer | Windows recommended build `25770` in ignored `fxserver/` | Gameplay server and TCP/UDP `127.0.0.1:30120` verified |
+| txAdmin | Configured profile bound to `127.0.0.1:40120` | HTTP reachability and controlled restart verified |
+| Qbox data | Minimum pinned stack in ignored `runtime/qbox-server-data/` | All required resources and oxmysql runtime connection verified |
+| FiveM/gameplay | Client not yet available for this acceptance run | Connection, character, spawn, inventory, money, reconnect, and restart persistence untested |
 
 ## Database
 
-Create the project database and application user on the supported runtime host:
-
-```bash
-git clone https://github.com/sanjaykumar2338/randy-2.git
-cd randy-2
-cp .env.example .env
-scripts/setup-dev-db.sh
-```
-
-If the MariaDB admin account needs credentials:
-
-```bash
-MYSQL_ADMIN_USER=root MYSQL_ADMIN_PASSWORD='ADMIN_PASSWORD' scripts/setup-dev-db.sh
-```
-
-Keep `.env` local and ignored. Use the existing project database values:
+The supported runtime uses:
 
 ```text
+Service:  TarrantMariaDB
+Server:   MariaDB 12.3.2
+Address:  127.0.0.1:3306
 Database: tarrant_rp_dev
-User: tarrant_rp
-Host: 127.0.0.1
+User:     tarrant_rp
 ```
 
-## FXServer And txAdmin
+The dedicated application user has project-database privileges rather than global administrative access. Its password and the separate local admin password are generated/stored in ignored `.env`; never place either value in a tracked config or command transcript.
 
-Download the latest recommended artifact directly from the official artifact list for the runtime OS. Keep the extracted `server` folder outside Git.
-
-Suggested Linux layout:
-
-```text
-~/FXServer/server/      # extracted artifact
-~/FXServer/server-data/ # this repository clone
-```
-
-Linux startup:
-
-```bash
-cd ~/FXServer/server-data
-bash ~/FXServer/server/run.sh
-```
-
-Suggested Windows layout:
-
-```text
-C:\FXServer\server\      # extracted artifact
-C:\FXServer\server-data\ # this repository clone
-```
-
-Windows startup:
+Check the service and connection without exposing secrets:
 
 ```powershell
-cd C:\FXServer\server-data
-C:\FXServer\server\FXServer.exe
+Get-Service TarrantMariaDB
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-env.ps1
 ```
 
-Open txAdmin at `http://localhost:40120` and complete first-run setup. Do not commit txAdmin credentials or generated local config files.
+XAMPP remains installed for unrelated projects. Leave its MySQL/MariaDB module stopped while `TarrantMariaDB` owns port 3306. Qbox does not support the XAMPP database distribution even if its port is changed.
 
-## Qbox Recipe
+## Runtime-Verified Minimum Qbox Stack
 
-In txAdmin, deploy the official Qbox recipe:
+The runtime installer derives a deliberately small Week 1 subset from official Qbox recipe inputs and pins released artifacts:
 
-1. Choose `Popular Recipes`.
-2. Select `QBox Framework` or the official `Qbox Stable` recipe if txAdmin offers both.
-3. Use the `tarrant_rp_dev` database with the `tarrant_rp` application user.
-4. Use `Tarrant County RP - Development` as the temporary server name.
-5. Keep license keys and DB passwords in txAdmin/local ignored config only.
+| Resource | Version |
+| --- | --- |
+| `qbx_core` | 1.23.0 |
+| `qbx_vehicles` | 1.4.2 |
+| `qbx_spawn` | 0.1.1 |
+| `qbx_hud` | 0.1.0 |
+| `ox_lib` | 3.39.0 |
+| `oxmysql` | 2.14.1 |
+| `ox_target` | 1.18.1 |
+| `ox_inventory` | 2.47.9 |
+| `illenium-appearance` | 5.7.0 |
 
-The current stable recipe imports base Qbox SQL, downloads released `qbx_core`, `qbx_spawn`, `qbx_vehicles`, Overextended resources including `ox_lib`, `oxmysql`, `ox_inventory`, and configures `inventory:framework "qbx"`.
+The staged tree also includes the required Cfx default resources and reserves `[tarrant]` for future project resources. The namespace currently contains documentation only, so it is intentionally not started as a resource category. Voice is intentionally deferred. `runtime-manifest.json` records the pinned sources and archive hashes.
 
-After deployment, review generated startup order. `ox_lib` and `qbx_core` must start before Qbox resources, and `ox_inventory` must be configured for `qbx`.
+The runtime startup order is explicit: Cfx defaults, `ox_lib`, `oxmysql`, `qbx_core`, `qbx_vehicles`, `ox_target`, `ox_inventory`, `qbx_spawn`, `illenium-appearance`, then `qbx_hud`. Add `ensure [tarrant]` only after the namespace contains at least one valid resource with an `fxmanifest.lua`; otherwise FXServer reports a missing resource category. `qbx_vehicles` is required by the current Qbox bridge in `ox_inventory`. OneSync is enabled and both game endpoints are loopback-only for local Week 1 testing.
 
-## Readiness Check
+The minimum profile also applies the required temporary development identity, disables Qbox's optional apartment-first spawn and Discord rich presence, removes starter ID-card callbacks whose optional resources are not installed, limits character cleanup to installed schemas, and normalizes a few official-recipe inventory names to items that are actually present. These narrow overrides avoid half-completed character creation while keeping the standard Qbox character, spawn, inventory, and money paths.
 
-After recipe deployment, run:
+Base Qbox and `qbx_core` SQL were already imported. Do not point txAdmin's official Qbox recipe at this same database/server-data tree; recipe SQL includes seed operations that can fail or collide when repeated. `install-qbox-runtime.ps1` is likewise intended for a new empty destination and refuses to overwrite the staged runtime.
+
+## Validation Commands
+
+Run from the repository root. The explicit bypass affects only the launched Windows PowerShell process:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-env.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-qbox-readiness.ps1
+```
+
+After adding the Cfx.re key to ignored `.env`, regenerate only the ignored local runtime configuration:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-qbox-runtime.ps1 -ConfigureOnly
+```
+
+## Remaining Manual Actions
+
+1. Install/launch FiveM with a licensed, updated GTA V copy on this workstation.
+2. Connect locally to `127.0.0.1:30120` and execute `docs/week1-test-plan.md`.
+
+Week 1 becomes complete only after character creation, spawn, inventory, money, reconnect, and full server-restart persistence checks all pass.
+
+## Secondary Unix Helpers
+
+The original Bash paths remain available for a separate supported Linux host:
 
 ```bash
+scripts/setup-dev-db.sh
+scripts/check-env.sh
 scripts/check-qbox-readiness.sh
 ```
 
-This checks the host OS, MariaDB version, project DB connectivity, ignored secret handling, and expected Qbox/ox resource directories.
-
-## Week 1 Acceptance Test
-
-Run the acceptance checks in `docs/week1-test-plan.md`. Do not mark Week 1 complete until FXServer, txAdmin, Qbox, database persistence, client connection, character creation, spawn, inventory, money, reconnect, and server-restart persistence are all actually tested.
+Download the then-current Linux FXServer artifact rather than copying the Windows binary tree.
