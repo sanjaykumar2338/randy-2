@@ -2,19 +2,19 @@
 
 Commercial FiveM lifestyle/economy RP server foundation built on Qbox.
 
-The Windows 11 AMD64 Week 1 server runtime is operational, but it is not yet gameplay-verified. The supported standalone database, FXServer, txAdmin profile, and minimum pinned Qbox-derived server-data tree are running locally. FiveM client installation and the in-game acceptance tests still require manual account/client interaction.
+The Windows 11 AMD64 Week 1 playable foundation is operational and gameplay-verified on GTA V/FiveM Enhanced. The supported standalone database, Enhanced FXServer, txAdmin profile, minimum pinned Qbox-derived server-data tree, inventory, and voice foundation are running locally. One post-restart client persistence check remains before final Week 1 acceptance.
 
 ## Current Windows Runtime
 
-- Repository root: `C:\xampp\htdocs\myworkplace\randy-2`
+- Repository root: `C:\xampp\htdocs\randy-2`
 - MariaDB 12.3.2 runs as the automatic Windows service `TarrantMariaDB`, bound to `127.0.0.1:3306`.
 - Database `tarrant_rp_dev` and dedicated application user `tarrant_rp` are configured; credentials remain only in the ignored local `.env`.
-- FXServer recommended build `25770` is extracted under ignored `fxserver/`.
+- The Enhanced FXServer build used for acceptance testing is stored under ignored `server-binaries/`.
 - Bundled txAdmin is configured and reachable only on `127.0.0.1:40120`.
 - A minimum official-release Qbox stack runs under ignored `runtime/qbox-server-data/`; its required resources, oxmysql connection, and base/core/vehicle schemas are verified.
 - XAMPP is retained for unrelated local work, but its MariaDB 10.4 instance is stopped and unsupported by Qbox. Do not start XAMPP MySQL while `TarrantMariaDB` is using port 3306.
 
-Runtime verification covers downloads, manifests, configuration, dependency order, database connectivity, required resource startup, loopback endpoints, and a controlled server restart. Character, inventory, money, reconnect, and persistence flows still require a FiveM client test.
+Runtime verification covers downloads, manifests, configuration, dependency order, database connectivity, required resource startup, loopback endpoints, a controlled txAdmin restart, and the Week 1 in-game character/spawn/HUD/movement/chat/inventory path. The same character and `water` x2 were verified through normal reconnect; the database retained character, money, metadata, position, and inventory state across the controlled FXServer restart. Two-player voice communication remains a multiplayer acceptance test.
 
 ## Repository Layout
 
@@ -34,7 +34,7 @@ txData/              Ignored txAdmin state
 - Windows 11 AMD64, Git, and Windows PowerShell 5.1 or newer
 - Standalone MariaDB 10.9 or newer; MariaDB 12.3 LTS is the current Qbox recommendation
 - A Cfx.re account and development server license key
-- A licensed GTA V installation and FiveM client for gameplay testing
+- A licensed GTA V installation and a matching FiveM client/server generation for gameplay testing
 - Node.js/npm only when rebuilding resource web assets; the staged releases are prebuilt
 
 Qbox explicitly does not support XAMPP as its runtime database.
@@ -67,9 +67,13 @@ scripts/check-env.sh
 scripts/check-qbox-readiness.sh
 ```
 
+## Backup
+
+Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\backup-dev.ps1` to create a timestamped backup under ignored `artifacts/backups/`. It contains redacted operational configuration, project-owned `[tarrant]` resources, and a private database dump. It excludes `.env`, `development.cfg`, txAdmin state, license keys, and passwords. Review the included `RESTORE.txt` before restoring.
+
 ## Next Manual Gate
 
-Install FiveM with a licensed, updated GTA V copy on this same workstation, connect to `127.0.0.1:30120`, and complete the Week 1 gameplay/persistence test plan. The game endpoints intentionally remain loopback-only.
+Reconnect the same character once after the controlled restart and visually confirm the saved inventory and money state. Separately, run the two-player voice communication acceptance test when a second client is available. Do not start later-phase gameplay systems yet.
 
 See `docs/fxserver.md`, `docs/week1-runtime.md`, and `docs/week1-test-plan.md` for the runtime flow and acceptance criteria.
 

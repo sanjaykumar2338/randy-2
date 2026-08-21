@@ -22,7 +22,7 @@ randy-2/
   txData/                   # txAdmin profiles and credentials
 ```
 
-The repository root on the staged workstation is `C:\xampp\htdocs\myworkplace\randy-2`.
+The repository root on the staged workstation is `C:\xampp\htdocs\randy-2`.
 
 txAdmin is bundled with FXServer; no separate txAdmin download is required. It was smoke-tested with its interface restricted to loopback and returned HTTP 200 at `http://127.0.0.1:40120`.
 
@@ -42,9 +42,9 @@ Retrieve the current one-time PIN locally without copying it into chat:
 Select-String -LiteralPath .\runtime\fxserver.stdout.log -Pattern 'Use this PIN' | Select-Object -Last 1
 ```
 
-Open `http://127.0.0.1:40120`, enter that PIN, link the intended Cfx.re account, set the local backup password, and supply a development server license key through ignored local configuration. Account linking, key issuance, and browser confirmation cannot be automated safely. Treat both the PIN and license key as secrets.
+Open `http://127.0.0.1:40120`, enter the locally displayed PIN, link the intended Cfx.re account, set the local backup password, and use the existing ignored development license configuration. Account linking and browser confirmation cannot be automated safely. Treat the PIN, backup password, and license key as secrets.
 
-The Qbox files and database schema are already staged. In txAdmin's deployer, choose the existing-server-data workflow, use `C:\xampp\htdocs\myworkplace\randy-2\runtime\qbox-server-data` as the data directory, and select `server.cfg`. Do not deploy the official Qbox recipe into `tarrant_rp_dev`: a second recipe import can collide with previously seeded rows.
+The Qbox files and database schema are already staged. In txAdmin's deployer, choose the existing-server-data workflow, use `C:\xampp\htdocs\randy-2\runtime\qbox-server-data` as the data directory, and select `server.cfg`. Do not deploy the official Qbox recipe into `tarrant_rp_dev`: a second recipe import can collide with previously seeded rows.
 
 Before starting the server profile, refresh ignored configuration after placing the key in `.env`:
 

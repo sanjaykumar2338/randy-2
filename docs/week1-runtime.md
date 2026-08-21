@@ -1,10 +1,10 @@
 # Week 1 Playable Runtime Runbook
 
-Status: `PARTIAL — SERVER RUNTIME HEALTHY, GAMEPLAY TESTS PENDING`.
+Status: `PARTIAL - POST-RESTART CLIENT CHECK REQUIRED`.
 
-The Windows 11 AMD64 workstation has a supported database, current server binaries, a configured txAdmin profile, and a minimum Qbox-derived resource set running on local-only endpoints. Evidence covers installation, manifests, configuration, dependency order, SQL import, oxmysql connectivity, required resource startup, HTTP endpoints, and a controlled clean restart. FiveM gameplay and persistence remain untested.
+The Windows 11 AMD64 workstation has a supported database, an Enhanced FXServer, a configured txAdmin profile, and a minimum Qbox-derived resource set running on local-only endpoints. Evidence covers installation, manifests, configuration, dependency order, SQL import, oxmysql connectivity, required resource startup, HTTP endpoints, in-game single-client gameplay, normal reconnect persistence, and a controlled txAdmin restart. A post-restart visual client check and the separate two-player voice acceptance test remain.
 
-Repository root: `C:\xampp\htdocs\myworkplace\randy-2`.
+Repository root: `C:\xampp\htdocs\randy-2`.
 
 ## Official Sources
 
@@ -22,10 +22,10 @@ Repository root: `C:\xampp\htdocs\myworkplace\randy-2`.
 | --- | --- | --- |
 | Database | Standalone MariaDB 12.3.2, service `TarrantMariaDB`, automatic start, loopback `127.0.0.1:3306` | Service/version/app-user connection and SQL import verified |
 | Legacy XAMPP | MariaDB 10.4 retained but stopped | Unsupported by Qbox; must not share port 3306 |
-| FXServer | Windows recommended build `25770` in ignored `fxserver/` | Gameplay server and TCP/UDP `127.0.0.1:30120` verified |
+| FXServer | Enhanced build `b127` in ignored `server-binaries/` | Gameplay server, TCP/UDP `127.0.0.1:30120`, and txAdmin restart verified |
 | txAdmin | Configured profile bound to `127.0.0.1:40120` | HTTP reachability and controlled restart verified |
 | Qbox data | Minimum pinned stack in ignored `runtime/qbox-server-data/` | All required resources and oxmysql runtime connection verified |
-| FiveM/gameplay | Client not yet available for this acceptance run | Connection, character, spawn, inventory, money, reconnect, and restart persistence untested |
+| GTA/FiveM gameplay | GTA V Enhanced and FiveM Enhanced | Character creation/load, spawn, HUD, movement, camera, jump, chat, and inventory tested in game |
 
 ## Database
 
@@ -66,7 +66,7 @@ The runtime installer derives a deliberately small Week 1 subset from official Q
 | `ox_inventory` | 2.47.9 |
 | `illenium-appearance` | 5.7.0 |
 
-The staged tree also includes the required Cfx default resources and reserves `[tarrant]` for future project resources. The namespace currently contains documentation only, so it is intentionally not started as a resource category. Voice is intentionally deferred. `runtime-manifest.json` records the pinned sources and archive hashes.
+The staged tree also includes the required Cfx default resources and reserves `[tarrant]` for future project resources. The namespace currently contains documentation only, so it is intentionally not started as a resource category. Official upstream `AvarianKnight/pma-voice` version 7.0.1 (commit `6c9d96ed7a02e30912f1a0ce92629bf9afbbca8c`) is installed in the ignored runtime with a Qbox-compatible `voice.cfg`. `runtime-manifest.json` records the pinned core sources and archive hashes.
 
 The runtime startup order is explicit: Cfx defaults, `ox_lib`, `oxmysql`, `qbx_core`, `qbx_vehicles`, `ox_target`, `ox_inventory`, `qbx_spawn`, `illenium-appearance`, then `qbx_hud`. Add `ensure [tarrant]` only after the namespace contains at least one valid resource with an `fxmanifest.lua`; otherwise FXServer reports a missing resource category. `qbx_vehicles` is required by the current Qbox bridge in `ox_inventory`. OneSync is enabled and both game endpoints are loopback-only for local Week 1 testing.
 
@@ -89,12 +89,38 @@ After adding the Cfx.re key to ignored `.env`, regenerate only the ignored local
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-qbox-runtime.ps1 -ConfigureOnly
 ```
 
+## Week 1 Acceptance Results
+
+| Check | Result | Evidence boundary |
+| --- | --- | --- |
+| Core gameplay path | PASS | Tested in game: character creation/appearance save, selection/load, spawn, HUD, movement, camera, jump, chat, and inventory |
+| Voice resource installed/configured | PASS | Official `pma-voice` upstream source and Qbox-compatible configuration |
+| Voice resource runtime | PASS | Server starts the resource cleanly; one client initialized its Realtek microphone without repeating voice errors |
+| Two-player voice | REQUIRES SECOND PLAYER | Not claimed from a single-client session |
+| Inventory item persistence | PASS | Existing `water` item, quantity 2, verified in ox_inventory in game and retained after normal reconnect; matching database inventory state confirmed |
+| Normal reconnect persistence | PASS | Same character returned through the character screen and retained the tested inventory state |
+| Money and character state | PASS | Server-side state retained cash 500, bank 5040, character metadata, and saved position |
+| Controlled FXServer restart | PASS (server-side) | txAdmin restart executed 2026-08-21 23:34; new process started, oxmysql reconnected, ox_inventory loaded 301 items, and pma-voice started. Persistent character/money/inventory records remained in MariaDB |
+
+The controlled restart did not include another post-restart visual client session, so the restart row deliberately distinguishes server/database verification from in-game verification. The earlier normal reconnect and inventory persistence checks were completed in game.
+
+## Error Review
+
+- No critical Qbox, oxmysql, ox_inventory, or pma-voice startup errors were found after the controlled restart.
+- `SetTextChatEnabled is not implemented yet` is an upstream Enhanced Early Access warning; chat continued to function in game.
+- Public server-list/heartbeat requests can fail in the intentional local-only configuration. They do not affect localhost gameplay and are nonblocking.
+- Enhanced native deprecation and available-server-build notices are nonblocking Week 1 warnings.
+
 ## Remaining Manual Actions
 
-1. Install/launch FiveM with a licensed, updated GTA V copy on this workstation.
-2. Connect locally to `127.0.0.1:30120` and execute `docs/week1-test-plan.md`.
+1. Reconnect the same character after the controlled restart and visually confirm `water` x2 and the expected money/character state.
+2. Connect a second player and verify actual proximity/radio voice communication. This is a multiplayer acceptance test and must not be inferred from one client.
 
-Week 1 becomes complete only after character creation, spawn, inventory, money, reconnect, and full server-restart persistence checks all pass.
+## Backup And Restore
+
+Run `scripts\backup-dev.ps1` to create a timestamped backup under ignored `artifacts\backups`. It includes redacted operational configuration, `[tarrant]` resources, and a private SQL dump while excluding `.env`, `development.cfg`, license keys, passwords, and txAdmin credentials. Stop FXServer and take a fresh backup before restoring; then review/copy configuration and resources and import the SQL using ignored local `.env` credentials. Each backup includes `RESTORE.txt`.
+
+Week 1 remains partial until the post-restart client check is complete. Two-player voice communication remains explicitly untested.
 
 ## Secondary Unix Helpers
 

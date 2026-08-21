@@ -16,7 +16,18 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $runtimeRoot = Join-Path $repositoryRoot 'runtime'
 if (-not $FxServerExecutable) {
-    $FxServerExecutable = Join-Path $repositoryRoot 'fxserver\FXServer.exe'
+    $enhancedCandidates = @(
+        Get-ChildItem -Path (Join-Path $repositoryRoot 'server-binaries\enhanced-*\cfx-server.exe') `
+            -File `
+            -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending
+    )
+    if ($enhancedCandidates.Count -gt 0) {
+        $FxServerExecutable = $enhancedCandidates[0].FullName
+    }
+    else {
+        $FxServerExecutable = Join-Path $repositoryRoot 'fxserver\FXServer.exe'
+    }
 }
 if (-not $TxDataPath) {
     $TxDataPath = Join-Path $repositoryRoot 'txData'
