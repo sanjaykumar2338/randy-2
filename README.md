@@ -2,7 +2,7 @@
 
 Commercial FiveM lifestyle/economy RP server foundation built on Qbox.
 
-The Windows 11 AMD64 Week 1 playable foundation is operational and gameplay-verified on GTA V/FiveM Enhanced. The supported standalone database, Enhanced FXServer, txAdmin profile, minimum pinned Qbox-derived server-data tree, inventory, and voice foundation are running locally. One post-restart client persistence check remains before final Week 1 acceptance.
+The Windows 11 AMD64 Week 1 playable foundation is operational and gameplay-verified on GTA V/FiveM Enhanced. The supported standalone database, Enhanced FXServer, txAdmin profile, minimum pinned Qbox-derived server-data tree, inventory, and voice foundation are running locally. The 2026-08-22 restart acceptance rerun successfully reloaded character `ER26B064` and retained `water` x2, cash 500, and the pre-restart bank balance of 5050. The earlier 5040 expectation was stale: Qbox's configured civilian paycheck adds 10 to bank every 10 minutes while the character is online.
 
 ## Current Windows Runtime
 
@@ -71,9 +71,9 @@ scripts/check-qbox-readiness.sh
 
 Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\backup-dev.ps1` to create a timestamped backup under ignored `artifacts/backups/`. It contains redacted operational configuration, project-owned `[tarrant]` resources, and a private database dump. It excludes `.env`, `development.cfg`, txAdmin state, license keys, and passwords. Review the included `RESTORE.txt` before restoring.
 
-## Next Manual Gate
+## Separate Multiplayer Acceptance Test
 
-Reconnect the same character once after the controlled restart and visually confirm the saved inventory and money state. Separately, run the two-player voice communication acceptance test when a second client is available. Do not start later-phase gameplay systems yet.
+Run the two-player voice communication acceptance test when a second client is available. Do not start later-phase gameplay systems yet.
 
 See `docs/fxserver.md`, `docs/week1-runtime.md`, and `docs/week1-test-plan.md` for the runtime flow and acceptance criteria.
 

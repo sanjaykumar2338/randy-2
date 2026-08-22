@@ -1,8 +1,8 @@
 # Week 1 Playable Runtime Runbook
 
-Status: `PARTIAL - POST-RESTART CLIENT CHECK REQUIRED`.
+Status: **PASS — Week 1 playable foundation completed. Two-player voice communication remains a separate multiplayer acceptance test requiring a second player.**
 
-The Windows 11 AMD64 workstation has a supported database, an Enhanced FXServer, a configured txAdmin profile, and a minimum Qbox-derived resource set running on local-only endpoints. Evidence covers installation, manifests, configuration, dependency order, SQL import, oxmysql connectivity, required resource startup, HTTP endpoints, in-game single-client gameplay, normal reconnect persistence, and a controlled txAdmin restart. A post-restart visual client check and the separate two-player voice acceptance test remain.
+The Windows 11 AMD64 workstation has a supported database, an Enhanced FXServer, a configured txAdmin profile, and a minimum Qbox-derived resource set running on local-only endpoints. Evidence covers installation, manifests, configuration, dependency order, SQL import, oxmysql connectivity, required resource startup, HTTP endpoints, in-game single-client gameplay, normal reconnect persistence, and controlled txAdmin restarts. The 2026-08-22 restart rerun reloaded character `ER26B064`; its inventory retained `water` x2, cash remained 500, and the pre-restart bank balance of 5050 persisted. The earlier 5040 expectation was stale because the configured civilian paycheck adds 10 to bank every 10 minutes while the character is online. The separate two-player voice acceptance test remains.
 
 Repository root: `C:\xampp\htdocs\randy-2`.
 
@@ -99,10 +99,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-qbox-r
 | Two-player voice | REQUIRES SECOND PLAYER | Not claimed from a single-client session |
 | Inventory item persistence | PASS | Existing `water` item, quantity 2, verified in ox_inventory in game and retained after normal reconnect; matching database inventory state confirmed |
 | Normal reconnect persistence | PASS | Same character returned through the character screen and retained the tested inventory state |
-| Money and character state | PASS | Server-side state retained cash 500, bank 5040, character metadata, and saved position |
-| Controlled FXServer restart | PASS (server-side) | txAdmin restart executed 2026-08-21 23:34; new process started, oxmysql reconnected, ox_inventory loaded 301 items, and pma-voice started. Persistent character/money/inventory records remained in MariaDB |
+| Money and character state | PASS | Cash 500 and the pre-restart bank balance 5050 persisted; the subsequent 5060 value matched one configured $10 civilian paycheck after reconnect |
+| Controlled FXServer restart | PASS | txAdmin recorded `RESTART SERVER` at 2026-08-22 21:42:43; the FXServer PID changed, oxmysql reconnected, ox_inventory loaded 301 items, and pma-voice started |
+| Post-restart character load | PASS | Qbox logged character `ER26B064` successfully loaded at 2026-08-22 21:56:00 |
+| Post-restart persistence assertion | PASS | MariaDB retained `water` x2, cash 500, character state and position, and the authoritative pre-restart bank balance of 5050 |
 
-The controlled restart did not include another post-restart visual client session, so the restart row deliberately distinguishes server/database verification from in-game verification. The earlier normal reconnect and inventory persistence checks were completed in game.
+The post-restart client session completed and loaded the expected character. The bank investigation found no restart or reconnect duplication: 5050 was last persisted at 2026-08-21 23:55:18, before the 2026-08-22 restart. Qbox then made the expected server-wide paycheck transition to 5060 at 2026-08-22 22:02:53. The character is an on-duty unemployed `Freelancer` with payment 10; `qbx_core` runs the paycheck loop every 10 minutes and deposits it into bank.
 
 ## Error Review
 
@@ -111,16 +113,15 @@ The controlled restart did not include another post-restart visual client sessio
 - Public server-list/heartbeat requests can fail in the intentional local-only configuration. They do not affect localhost gameplay and are nonblocking.
 - Enhanced native deprecation and available-server-build notices are nonblocking Week 1 warnings.
 
-## Remaining Manual Actions
+## Separate Multiplayer Acceptance Test
 
-1. Reconnect the same character after the controlled restart and visually confirm `water` x2 and the expected money/character state.
-2. Connect a second player and verify actual proximity/radio voice communication. This is a multiplayer acceptance test and must not be inferred from one client.
+1. Connect a second player and verify actual proximity/radio voice communication. This is a multiplayer acceptance test and must not be inferred from one client.
 
 ## Backup And Restore
 
 Run `scripts\backup-dev.ps1` to create a timestamped backup under ignored `artifacts\backups`. It includes redacted operational configuration, `[tarrant]` resources, and a private SQL dump while excluding `.env`, `development.cfg`, license keys, passwords, and txAdmin credentials. Stop FXServer and take a fresh backup before restoring; then review/copy configuration and resources and import the SQL using ignored local `.env` credentials. Each backup includes `RESTORE.txt`.
 
-Week 1 remains partial until the post-restart client check is complete. Two-player voice communication remains explicitly untested.
+The Week 1 playable foundation is complete. Post-restart character loading and persistence passed. Two-player voice communication remains explicitly untested and is tracked separately because it requires a second player.
 
 ## Secondary Unix Helpers
 
