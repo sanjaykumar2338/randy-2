@@ -5,6 +5,10 @@
 server.cfg
 secrets.cfg
 permissions.cfg
+staff.cfg
+discord.cfg
+base.cfg
+security.cfg
 ox.cfg
 voice.cfg
 misc.cfg

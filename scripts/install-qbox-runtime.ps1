@@ -310,44 +310,28 @@ $licenseLine
     Protect-SecretFile -Path $developmentConfig
 
     $serverConfig = @'
-# Minimum Week 1 Qbox runtime derived from the official Qbox lean txAdmin recipe.
+# Tarrant County RP Phase 1 runtime derived from the official Qbox lean recipe.
 endpoint_add_tcp "127.0.0.1:30120"
 endpoint_add_udp "127.0.0.1:30120"
 
 sv_maxclients 8
-set onesync on
+# txAdmin manages OneSync for this profile.
+# set onesync on
 set steam_webApiKey "none"
 sets tags "development, qbox"
 
 sv_hostname "Tarrant County RP - Development"
 sets sv_projectName "Tarrant County RP - Development"
-sets sv_projectDesc "Week 1 Qbox playable-foundation development runtime"
+sets sv_projectDesc "Phase 1 Qbox development runtime"
 sets locale "en-US"
 load_server_icon myLogo.png
-set sv_enforceGameBuild 3258
-sv_scriptHookAllowed 0
-
 exec development.cfg
-
-set resources_useSystemChat true
-set qbx_chat:joinMessage "^2%s joined the server"
-set qbx_chat:quitMessage "^1%s left the server (%s)"
-
-setr qb_locale "en"
-setr qbx:enableBridge "true"
-set qbx:enableQueue "true"
-set qbx:bucketLockdownMode "inactive"
-set qbx:max_jobs_per_player 1
-set qbx:max_gangs_per_player 1
-set qbx:setjob_replaces "true"
-set qbx:setgang_replaces "true"
-set qbx:cleanPlayerGroups "true"
-set qbx:allowMethodOverrides "true"
-set qbx:disableOverrideWarning "false"
-setr qbx:enableVehiclePersistence "false"
-set qbx:acknowledge "true"
-setr qbx:enableGroupManagement "false"
-setr illenium-appearance:locale "en"
+exec voice.cfg
+exec base.cfg
+exec security.cfg
+exec discord.cfg
+exec permissions.cfg
+exec staff.cfg
 
 exec ox.cfg
 
@@ -368,15 +352,28 @@ ensure ox_target
 ensure ox_inventory
 ensure qbx_spawn
 ensure illenium-appearance
+ensure pma-voice
 ensure qbx_hud
+ensure tarrant_ops
 
-exec permissions.cfg
 exec misc.cfg
 '@
     [System.IO.File]::WriteAllText((Join-Path $DataPath 'server.cfg'), $serverConfig, [System.Text.UTF8Encoding]::new($false))
 
-    foreach ($fileName in @('ox.cfg', 'permissions.cfg', 'misc.cfg', 'myLogo.png')) {
+    foreach ($fileName in @('ox.cfg', 'voice.cfg', 'permissions.cfg', 'misc.cfg', 'myLogo.png')) {
         Copy-Item -LiteralPath (Join-Path $RecipeSource $fileName) -Destination (Join-Path $DataPath $fileName) -Force
+    }
+    $projectConfig = Join-Path $repositoryRoot 'config'
+    foreach ($mapping in @{
+        'base.example.cfg' = 'base.cfg'
+        'security.example.cfg' = 'security.cfg'
+        'discord.example.cfg' = 'discord.cfg'
+        'permissions.example.cfg' = 'permissions.cfg'
+        'staff.example.cfg' = 'staff.cfg'
+    }.GetEnumerator()) {
+        $destination = Join-Path $DataPath $mapping.Value
+        if ($mapping.Value -eq 'staff.cfg' -and (Test-Path -LiteralPath $destination -PathType Leaf)) { continue }
+        Copy-Item -LiteralPath (Join-Path $projectConfig $mapping.Key) -Destination $destination -Force
     }
     Set-ExpectedTextReplacement `
         -Path (Join-Path $DataPath 'ox.cfg') `
@@ -412,6 +409,12 @@ if ($ConfigureOnly) {
             $recipeSource = (Get-ChildItem -LiteralPath $recipeExtract -Directory | Select-Object -First 1).FullName
         }
         Write-LocalConfiguration -DataPath $ServerDataPath -Settings $settings -RecipeSource $recipeSource
+        $tarrantSource = Join-Path $repositoryRoot 'resources\[tarrant]'
+        $tarrantDestination = Join-Path $ServerDataPath 'resources\[tarrant]'
+        [System.IO.Directory]::CreateDirectory($tarrantDestination) | Out-Null
+        foreach ($item in Get-ChildItem -LiteralPath $tarrantSource -Force -ErrorAction SilentlyContinue) {
+            Copy-Item -LiteralPath $item.FullName -Destination $tarrantDestination -Recurse -Force
+        }
     }
     finally {
         if ($configureWorkRoot) {

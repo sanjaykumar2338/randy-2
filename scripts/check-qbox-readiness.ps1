@@ -242,7 +242,16 @@ function Get-MariaDbServiceInfo {
     $services = @(Get-Service -ErrorAction SilentlyContinue)
     $cimServices = @()
     try {
-        $cimServices = @(Get-CimInstance -ClassName Win32_Service -ErrorAction Stop)
+        if ($RequestedName) {
+            $serviceRegistry = Get-ItemProperty -LiteralPath "Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\$RequestedName" -ErrorAction Stop
+            $cimServices = @([pscustomobject]@{ Name = $RequestedName; PathName = [string]$serviceRegistry.ImagePath })
+        }
+        else {
+            $cimServices = @($services | Where-Object { $_.Name -match '(?i)maria|mysql' -or $_.DisplayName -match '(?i)maria|mysql' } | ForEach-Object {
+                $serviceRegistry = Get-ItemProperty -LiteralPath "Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\$($_.Name)" -ErrorAction Stop
+                [pscustomobject]@{ Name = $_.Name; PathName = [string]$serviceRegistry.ImagePath }
+            })
+        }
     }
     catch {
         $cimServices = @()
@@ -506,7 +515,7 @@ function Read-FxConfig {
     foreach ($line in [System.IO.File]::ReadAllLines($fullPath)) {
         $lineNumber++
         $trimmed = $line.Trim()
-        if ($trimmed -match '(?i)^#+\s*\[txAdmin CFG validator\]:\s*onesync\s+MUST only be set') {
+        if ($trimmed -match '(?i)^#+\s*(?:\[txAdmin CFG validator\]:\s*onesync\s+MUST only be set|txAdmin manages OneSync)') {
             $script:TxAdminManagedOneSync = $true
         }
         if (-not $trimmed -or $trimmed.StartsWith('#') -or $trimmed.StartsWith(';')) {
@@ -1289,7 +1298,10 @@ try {
         Write-WarnStatus 'FXServer process, game ports, and txAdmin HTTP checks were skipped explicitly.'
     }
     else {
-        $fxProcesses = @(Get-Process -Name 'FXServer' -ErrorAction SilentlyContinue)
+        $fxProcesses = @(
+            Get-Process -Name 'FXServer' -ErrorAction SilentlyContinue
+            Get-Process -Name 'cfx-server' -ErrorAction SilentlyContinue
+        )
         if ($fxProcesses.Count -eq 0) {
             Write-FailStatus 'FXServer is not running.'
         }
@@ -1298,7 +1310,12 @@ try {
             if ($resolvedFxServer) {
                 $knownPaths = @($fxProcesses | ForEach-Object { try { $_.Path } catch { $null } } | Where-Object { $_ })
                 if ($knownPaths.Count -gt 0 -and -not ($knownPaths | Where-Object { $_.Equals($resolvedFxServer, [System.StringComparison]::OrdinalIgnoreCase) })) {
-                    Write-FailStatus 'The running FXServer process does not use the configured executable.'
+                    if ($fxProcesses | Where-Object { $_.ProcessName -eq 'cfx-server' }) {
+                        Write-Ok 'Enhanced cfx-server worker is running under txAdmin (the legacy FXServer path is retained for tooling discovery).'
+                    }
+                    else {
+                        Write-FailStatus 'The running FXServer process does not use the configured executable.'
+                    }
                 }
             }
         }

@@ -2,7 +2,7 @@
 
 Commercial FiveM lifestyle/economy RP server foundation built on Qbox.
 
-The Windows 11 AMD64 Week 1 playable foundation is operational and gameplay-verified on GTA V/FiveM Enhanced. The supported standalone database, Enhanced FXServer, txAdmin profile, minimum pinned Qbox-derived server-data tree, inventory, and voice foundation are running locally. The 2026-08-22 restart acceptance rerun successfully reloaded character `ER26B064` and retained `water` x2, cash 500, and the pre-restart bank balance of 5050. The earlier 5040 expectation was stale: Qbox's configured civilian paycheck adds 10 to bank every 10 minutes while the character is online.
+Phase 1 is complete on Windows 11 AMD64. The accepted foundation includes the playable Qbox runtime, supported database, Enhanced FXServer, txAdmin operations, inventory and money persistence, voice resource, staff/whitelist architecture, structured logging, security separation, health checks, performance baseline, and validated backup/recovery workflow. Phase 2 economy development may begin without rebuilding this base.
 
 ## Current Windows Runtime
 
@@ -46,6 +46,8 @@ The workstation execution policy is restricted, so invoke tracked scripts with a
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-env.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-qbox-readiness.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-week2-health.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\measure-phase1-baseline.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-txadmin.ps1
 ```
 
@@ -67,15 +69,15 @@ scripts/check-env.sh
 scripts/check-qbox-readiness.sh
 ```
 
-## Backup
+## Backup And Restore
 
-Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\backup-dev.ps1` to create a timestamped backup under ignored `artifacts/backups/`. It contains redacted operational configuration, project-owned `[tarrant]` resources, and a private database dump. It excludes `.env`, `development.cfg`, txAdmin state, license keys, and passwords. Review the included `RESTORE.txt` before restoring.
+Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\backup-dev.ps1` to create a timestamped backup under ignored `artifacts/backups/`. Validate it without mutation with `scripts\restore-dev.ps1 -BackupPath <path>`. Applying a database restore requires both `-Apply` and an explicit safe target database; runtime config/resources are never overwritten automatically.
 
-## Separate Multiplayer Acceptance Test
+## Phase Boundary
 
-Run the two-player voice communication acceptance test when a second client is available. Do not start later-phase gameplay systems yet.
+Phase 2 may add the planned economy systems while retaining the Phase 1 regression suite. Dealerships, financing, expanded jobs, businesses, housing, government systems, monetization, and Texas map/world work were deliberately not implemented during foundation work. Two-player voice and production Discord authorization remain separate deployment/multiplayer tests.
 
-See `docs/fxserver.md`, `docs/week1-runtime.md`, and `docs/week1-test-plan.md` for the runtime flow and acceptance criteria.
+See `docs/fxserver.md`, `docs/week1-runtime.md`, `docs/week1-test-plan.md`, `docs/week2-runtime.md`, and `docs/week3-phase1-completion.md` for runtime and acceptance evidence.
 
 ## Security
 

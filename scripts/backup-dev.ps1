@@ -14,7 +14,7 @@ $databaseBackup = Join-Path $backupRoot 'database'
 foreach ($path in @($configBackup, $resourceBackup, $databaseBackup)) { [System.IO.Directory]::CreateDirectory($path) | Out-Null }
 
 $runtimeConfig = Join-Path $repositoryRoot 'runtime\qbox-server-data'
-foreach ($name in @('server.cfg', 'ox.cfg', 'permissions.cfg', 'misc.cfg')) {
+foreach ($name in @('server.cfg', 'base.cfg', 'security.cfg', 'discord.cfg', 'staff.cfg', 'ox.cfg', 'voice.cfg', 'permissions.cfg', 'misc.cfg')) {
     $source = Join-Path $runtimeConfig $name
     if (Test-Path -LiteralPath $source -PathType Leaf) {
         $content = [System.IO.File]::ReadAllText($source)
@@ -48,5 +48,10 @@ finally {
     if ($hadPassword) { $env:MYSQL_PWD = $oldPassword } else { Remove-Item Env:\MYSQL_PWD -ErrorAction SilentlyContinue }
 }
 [System.IO.File]::WriteAllText((Join-Path $backupRoot 'RESTORE.txt'), "This backup excludes .env, development.cfg, txAdmin state, license keys, and passwords.`r`nStop FXServer and make a fresh backup before restoring. Review and copy config/resources, then import the SQL dump using ignored local .env credentials.`r`n", [System.Text.UTF8Encoding]::new($false))
+$manifest = foreach ($file in Get-ChildItem -LiteralPath $backupRoot -Recurse -File | Where-Object Name -ne 'MANIFEST.sha256') {
+    $relative = $file.FullName.Substring($backupRoot.Length + 1).Replace('\', '/')
+    '{0}  {1}' -f (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $relative
+}
+[System.IO.File]::WriteAllLines((Join-Path $backupRoot 'MANIFEST.sha256'), $manifest, [System.Text.UTF8Encoding]::new($false))
 Write-Host "[ok] Development backup created: $backupRoot"
 Write-Host '[ok] Secrets and txAdmin credentials were excluded; the private database dump remains under ignored artifacts/'

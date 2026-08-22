@@ -223,7 +223,16 @@ function Get-MariaDbServiceInfo {
     $services = @(Get-Service -ErrorAction SilentlyContinue)
     $cimServices = @()
     try {
-        $cimServices = @(Get-CimInstance -ClassName Win32_Service -ErrorAction Stop)
+        if ([string]::IsNullOrWhiteSpace($RequestedName)) {
+            $cimServices = @($services | Where-Object { $_.Name -match '(?i)maria|mysql' -or $_.DisplayName -match '(?i)maria|mysql' } | ForEach-Object {
+                $serviceRegistry = Get-ItemProperty -LiteralPath "Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\$($_.Name)" -ErrorAction Stop
+                [pscustomobject]@{ Name = $_.Name; PathName = [string]$serviceRegistry.ImagePath }
+            })
+        }
+        else {
+            $serviceRegistry = Get-ItemProperty -LiteralPath "Registry::HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\$RequestedName" -ErrorAction Stop
+            $cimServices = @([pscustomobject]@{ Name = $RequestedName; PathName = [string]$serviceRegistry.ImagePath })
+        }
     }
     catch {
         $cimServices = @()
@@ -664,7 +673,9 @@ try {
 
     $fiveMPaths = @(
         (Join-Path $env:LOCALAPPDATA 'FiveM\FiveM.exe'),
-        (Join-Path $env:LOCALAPPDATA 'FiveM\FiveM.app\FiveM.exe')
+        (Join-Path $env:LOCALAPPDATA 'FiveM\FiveM.app\FiveM.exe'),
+        (Join-Path $env:LOCALAPPDATA 'FiveM for GTAV Enhanced\FiveM.exe'),
+        (Join-Path $env:LOCALAPPDATA 'FiveM for GTAV Enhanced\FiveM.app\FiveM.exe')
     )
     $fiveMPath = $fiveMPaths | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     if ($fiveMPath) {
