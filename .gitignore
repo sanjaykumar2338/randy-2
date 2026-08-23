@@ -58,6 +58,7 @@ database/*.backup
 # Local runtime/test evidence
 /runtime/
 /test-results/
+/backups/
 
 # Editor and OS metadata
 .DS_Store
