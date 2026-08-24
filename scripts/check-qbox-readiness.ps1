@@ -458,8 +458,7 @@ function Get-FxServerPath {
     foreach ($candidate in @(
         (Join-Path $script:RepositoryRoot 'server\FXServer.exe'),
         (Join-Path $script:RepositoryRoot 'fxserver\FXServer.exe'),
-        (Join-Path $parent 'server\FXServer.exe'),
-        'C:\FXServer\server\FXServer.exe'
+        (Join-Path $parent 'server\FXServer.exe')
     )) {
         if (Test-Path -LiteralPath $candidate -PathType Leaf) {
             return [System.IO.Path]::GetFullPath($candidate)

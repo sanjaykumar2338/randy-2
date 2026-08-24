@@ -73,6 +73,12 @@ scripts/check-qbox-readiness.sh
 
 Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\backup-dev.ps1` to create a timestamped backup under ignored `artifacts/backups/`. Validate it without mutation with `scripts\restore-dev.ps1 -BackupPath <path>`. Applying a database restore requires both `-Apply` and an explicit safe target database; runtime config/resources are never overwritten automatically.
 
+## Deployment Portability
+
+Tracked scripts derive the repository root from their own location; the Windows development path documented above is acceptance evidence, not a runtime requirement. On each environment, create a fresh ignored `.env` from `.env.example`. Server identity, game bind address/port, txAdmin interface/port, database settings, runtime paths, and credentials are environment configuration and must not be copied from the development machine.
+
+Loopback remains the safe default for local development. A staging operator must deliberately set `FIVEM_BIND_ADDRESS`, firewall rules, and the public/private access model. MariaDB and txAdmin should remain loopback-only when they run on the same host unless a separately reviewed private-network or reverse-proxy design requires otherwise.
+
 ## Phase Boundary
 
 Phase 2 may add the planned economy systems while retaining the Phase 1 regression suite. Dealerships, financing, expanded jobs, businesses, housing, government systems, monetization, and Texas map/world work were deliberately not implemented during foundation work. Two-player voice and production Discord authorization remain separate deployment/multiplayer tests.

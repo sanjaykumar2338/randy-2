@@ -90,4 +90,4 @@ A backup was checksum-validated and imported into an isolated temporary database
 
 ## Manual Deployment Actions
 
-No manual action blocks the local Week 2 foundation. Before production Discord integration, Randy/Sanjay must create or authorize the Discord application, choose the guild and staff/whitelist roles, place real IDs/secrets only in ignored configuration, and approve enabling role synchronization/whitelist enforcement. A second player is still required only for the separately tracked multiplayer voice test.
+No manual action blocks the local Week 2 foundation. Before production Discord integration, the deployment owner must create or authorize the Discord application, choose the guild and staff/whitelist roles, place real IDs/secrets only in ignored configuration, and approve enabling role synchronization/whitelist enforcement. A second player is still required only for the separately tracked multiplayer voice test.

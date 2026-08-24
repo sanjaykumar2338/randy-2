@@ -4,10 +4,9 @@
 param(
     [string]$FxServerExecutable,
     [string]$TxDataPath,
-    [ValidateRange(1, 65535)]
-    [int]$TxAdminPort = 40120,
-    [ValidateRange(1, 65535)]
-    [int]$FxServerPort = 30120
+    [string]$TxAdminBindAddress,
+    [int]$TxAdminPort,
+    [int]$FxServerPort
 )
 
 Set-StrictMode -Version Latest
@@ -15,6 +14,27 @@ $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $runtimeRoot = Join-Path $repositoryRoot 'runtime'
+$settings = @{}
+$envPath = Join-Path $repositoryRoot '.env'
+if (Test-Path -LiteralPath $envPath -PathType Leaf) {
+    foreach ($line in [System.IO.File]::ReadAllLines($envPath)) {
+        if ($line -match '^\s*(?<name>[A-Za-z_][A-Za-z0-9_]*)=(?<value>.*)$') {
+            $settings[$matches.name] = $matches.value.Trim().Trim('"').Trim("'")
+        }
+    }
+}
+if (-not $PSBoundParameters.ContainsKey('TxAdminBindAddress')) {
+    $TxAdminBindAddress = if ($settings.ContainsKey('TXADMIN_BIND_ADDRESS') -and $settings.TXADMIN_BIND_ADDRESS) { $settings.TXADMIN_BIND_ADDRESS } else { '127.0.0.1' }
+}
+if (-not $PSBoundParameters.ContainsKey('TxAdminPort')) {
+    $TxAdminPort = if ($settings.ContainsKey('TXADMIN_PORT') -and $settings.TXADMIN_PORT) { [int]$settings.TXADMIN_PORT } else { 40120 }
+}
+if (-not $PSBoundParameters.ContainsKey('FxServerPort')) {
+    $FxServerPort = if ($settings.ContainsKey('FIVEM_PORT') -and $settings.FIVEM_PORT) { [int]$settings.FIVEM_PORT } else { 30120 }
+}
+foreach ($configuredPort in @($TxAdminPort, $FxServerPort)) {
+    if ($configuredPort -lt 1 -or $configuredPort -gt 65535) { throw 'Configured ports must be from 1 through 65535.' }
+}
 if (-not $FxServerExecutable) {
     $enhancedCandidates = @(
         Get-ChildItem -Path (Join-Path $repositoryRoot 'server-binaries\enhanced-*\cfx-server.exe') `
@@ -35,6 +55,9 @@ if (-not $TxDataPath) {
 
 $FxServerExecutable = [System.IO.Path]::GetFullPath($FxServerExecutable)
 $TxDataPath = [System.IO.Path]::GetFullPath($TxDataPath)
+if ($TxAdminBindAddress -match '[\s/\\]' -or [string]::IsNullOrWhiteSpace($TxAdminBindAddress)) {
+    throw 'TxAdminBindAddress must be a hostname or IP address without whitespace or path characters.'
+}
 if (-not (Test-Path -LiteralPath $FxServerExecutable -PathType Leaf)) {
     throw "FXServer executable was not found: $FxServerExecutable"
 }
@@ -125,7 +148,8 @@ foreach ($path in @($stdoutPath, $stderrPath)) {
     Protect-LocalFile -Path $path
 }
 
-$txAdminUri = "http://127.0.0.1:$TxAdminPort/"
+$txAdminHealthHost = if ($TxAdminBindAddress -in @('0.0.0.0', '::', '[::]')) { '127.0.0.1' } else { $TxAdminBindAddress.Trim('[', ']') }
+$txAdminUri = "http://${txAdminHealthHost}:$TxAdminPort/"
 try {
     $existing = Invoke-WebRequest -UseBasicParsing -Uri $txAdminUri -TimeoutSec 2
     if ($existing.StatusCode -eq 200) {
@@ -144,7 +168,7 @@ foreach ($name in $environmentNames) {
 }
 
 try {
-    $env:TXHOST_INTERFACE = '127.0.0.1'
+    $env:TXHOST_INTERFACE = $TxAdminBindAddress
     $env:TXHOST_TXA_PORT = $TxAdminPort.ToString()
     $env:TXHOST_FXS_PORT = $FxServerPort.ToString()
     $env:TXHOST_DATA_PATH = $TxDataPath
@@ -193,4 +217,4 @@ if (-not $ready) {
 
 Write-Host "[ok] FXServer/txAdmin started with process ID $($process.Id)"
 Write-Host "[ok] Local txAdmin URL: $txAdminUri"
-Write-Host '[ok] Both txAdmin and the staged game endpoint are bound to loopback only'
+Write-Host "[ok] txAdmin interface: $TxAdminBindAddress"
