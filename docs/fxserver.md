@@ -1,6 +1,6 @@
 # FXServer Development Notes
 
-The Windows Week 1 runtime uses the recommended FXServer build `25770` that was current when it was staged. Its archive and extracted binaries are ignored rather than committed.
+The original local Phase 1 gameplay acceptance used Enhanced FXServer `b127`. Legacy artifact `25770` is a different, non-Enhanced line and is not the deployment target. Because Cfx no longer exposes b127 through its official resolver, the tracked artifact manifest pins official Enhanced `b129`, which passed the full server-side Phase 1 readiness suite on 2026-08-24. Archives and extracted binaries remain ignored.
 
 Official references:
 

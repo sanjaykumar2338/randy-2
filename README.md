@@ -85,6 +85,8 @@ Phase 2 may add the planned economy systems while retaining the Phase 1 regressi
 
 See `docs/fxserver.md`, `docs/week1-runtime.md`, `docs/week1-test-plan.md`, `docs/week2-runtime.md`, and `docs/week3-phase1-completion.md` for runtime and acceptance evidence.
 
+Fresh Windows staging deployment is documented in `docs/staging-deployment.md`.
+
 ## Security
 
 Never commit Cfx.re keys, database/admin passwords, Discord credentials, Tebex secrets, private database exports, downloaded binaries, txAdmin state, or generated runtime data. Tracked `*.example.*` files contain placeholders only; real values belong in ignored `.env`, `development.cfg`, or txAdmin files.

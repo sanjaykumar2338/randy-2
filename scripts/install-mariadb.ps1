@@ -16,6 +16,8 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $runtimeDirectory = Join-Path $repositoryRoot 'runtime'
 $logPath = Join-Path $runtimeDirectory 'install-mariadb.log'
+$officialMsiUrl = 'https://dlm.mariadb.com/4716006/MariaDB/mariadb-12.3.2/winx64-packages/mariadb-12.3.2-winx64.msi'
+$officialMsiSha256 = '5A964E4F1C719AA1D4B065236A0A7A343CB7592E6A21D1ACB6FD1D426683B912'
 $script:SensitiveValues = [System.Collections.Generic.List[string]]::new()
 
 function Add-SensitiveValue {
@@ -174,10 +176,6 @@ if (-not $service) {
     }
 
     $winget = Get-Command 'winget.exe' -ErrorAction SilentlyContinue
-    if (-not $winget) {
-        throw 'winget.exe is unavailable; install the official MariaDB MSI manually or make winget available.'
-    }
-
     # Install the fresh instance without placing a generated credential on the
     # winget/MSI command line. Networking remains disabled until the local-only
     # credential bootstrap below has completed.
@@ -186,8 +184,21 @@ if (-not $service) {
     $previousErrorActionPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        & $winget.Source install --id MariaDB.Server --exact --version $PackageVersion --scope machine --silent --accept-source-agreements --accept-package-agreements --override $installerOverride *> $null
-        $installerExitCode = $LASTEXITCODE
+        if ($winget) {
+            & $winget.Source install --id MariaDB.Server --exact --version $PackageVersion --scope machine --silent --accept-source-agreements --accept-package-agreements --override $installerOverride *> $null
+            $installerExitCode = $LASTEXITCODE
+        }
+        else {
+            if ($PackageVersion -ne '12.3.2.0') { throw 'The MSI fallback is pinned only for MariaDB 12.3.2.0.' }
+            $downloadDirectory = Join-Path $runtimeDirectory 'downloads'
+            [IO.Directory]::CreateDirectory($downloadDirectory) | Out-Null
+            $msiPath = Join-Path $downloadDirectory 'mariadb-12.3.2-winx64.msi'
+            & curl.exe --fail --location --silent --show-error --output $msiPath $officialMsiUrl
+            if ($LASTEXITCODE -ne 0) { throw 'Official MariaDB MSI download failed.' }
+            if ((Get-FileHash $msiPath -Algorithm SHA256).Hash -ne $officialMsiSha256) { throw 'MariaDB MSI checksum verification failed.' }
+            $msi = Start-Process msiexec.exe -ArgumentList @('/i', ('"{0}"' -f $msiPath), $installerOverride, '/qn', '/norestart') -WindowStyle Hidden -Wait -PassThru
+            $installerExitCode = $msi.ExitCode
+        }
     }
     finally {
         $ErrorActionPreference = $previousErrorActionPreference

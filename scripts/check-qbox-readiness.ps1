@@ -16,6 +16,8 @@ param(
     [string]$ServerConfig,
     [string]$TxDataDirectory,
     [string]$TxAdminUrl,
+    [ValidateSet('development', 'staging', 'production')]
+    [string]$Environment,
     [ValidateRange(1, 65535)]
     [int]$GamePort = 30120,
     [ValidateRange(250, 30000)]
@@ -850,6 +852,11 @@ try {
     if (-not $ServerConfig) { $ServerConfig = Get-Setting -Name 'FXSERVER_CONFIG' -Settings $settings }
     if (-not $TxDataDirectory) { $TxDataDirectory = Get-Setting -Name 'TXDATA_DIR' -Settings $settings }
     if (-not $TxAdminUrl) { $TxAdminUrl = Get-Setting -Name 'TXADMIN_URL' -Settings $settings -DefaultValue 'http://localhost:40120' }
+    $appEnvironment = if ($Environment) { $Environment.ToLowerInvariant() } else { (Get-Setting -Name 'APP_ENV' -Settings $settings -DefaultValue 'development').ToLowerInvariant() }
+    if ($appEnvironment -notin @('development', 'staging', 'production')) {
+        Write-FailStatus 'APP_ENV must be development, staging, or production.'
+        $appEnvironment = 'development'
+    }
 
     if ($DatabasePort -eq 0) {
         $portText = Get-Setting -Name 'DB_PORT' -Settings $settings -DefaultValue '3306'
@@ -1255,11 +1262,11 @@ try {
             if (-not $matchingEndpoint) {
                 Write-FailStatus "Startup config has no $protocol game endpoint on port $GamePort."
             }
-            elseif ($matchingEndpoint.Value -notmatch ('^(?:127\.0\.0\.1|localhost|\[::1\]):{0}$' -f $GamePort)) {
+            elseif ($appEnvironment -eq 'development' -and $matchingEndpoint.Value -notmatch ('^(?:127\.0\.0\.1|localhost|\[::1\]):{0}$' -f $GamePort)) {
                 Write-FailStatus "The $protocol game endpoint must bind to loopback for this local development profile."
             }
             else {
-                Write-Ok "The $protocol game endpoint is restricted to loopback port $GamePort."
+                Write-Ok "The $protocol game endpoint is valid for $appEnvironment on port $GamePort."
             }
         }
     }
@@ -1290,7 +1297,7 @@ try {
         $txUri = $null
     }
     if ($txUri -and -not (Test-PrivateOrLoopbackHost -HostName $txUri.DnsSafeHost)) {
-        Write-FailStatus 'TXADMIN_URL is public; txAdmin must remain on localhost or a private development address.'
+        Write-FailStatus 'TXADMIN_URL is public; txAdmin must remain on localhost or an approved private administrative address.'
     }
 
     if ($SkipRuntimeChecks) {

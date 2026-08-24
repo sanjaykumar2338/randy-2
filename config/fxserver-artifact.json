@@ -1,0 +1,13 @@
+{
+  "product": "FiveM for GTAV Enhanced FXServer",
+  "channel": "enhanced",
+  "build": 129,
+  "archiveName": "cfx-server_win_x64.zip",
+  "officialSource": "https://downloads.cfx-services.net/prod/01a01f0e-7471-722b-a8ec-9a1827a4fdee/cfx-server_win_x64.zip",
+  "archiveSha256": "0EFBCD51AD71103E37DE0A6A3EC94180C5B57E405685E8A4E137D107100DC65C",
+  "executable": "cfx-server.exe",
+  "executableSha256": "1A913513E27492E0E0C2701DFADBCE0ADE83914EA4643D45590447EABB652D7C",
+  "compatibilityTested": "2026-08-24",
+  "replacesHistoricalAcceptedBuild": 127,
+  "notes": "Enhanced b127 was the local Phase 1 acceptance build but is no longer exposed by the official artifact resolver. Enhanced b129 is the official successor and passed the complete server-side Phase 1 readiness suite locally."
+}

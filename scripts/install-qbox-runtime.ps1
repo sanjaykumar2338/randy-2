@@ -295,8 +295,8 @@ function Write-LocalConfiguration {
     $serverTags = Get-OptionalSetting -Settings $Settings -Name 'SERVER_TAGS' -DefaultValue 'development, qbox'
     $maxClientsText = Get-OptionalSetting -Settings $Settings -Name 'SERVER_MAX_CLIENTS' -DefaultValue '8'
     $environmentName = Get-OptionalSetting -Settings $Settings -Name 'APP_ENV' -DefaultValue 'development'
-    if ($dbHost -notin @('127.0.0.1', 'localhost')) {
-        throw 'DB_HOST must remain local for this loopback-only development runtime.'
+    if ($dbHost -notin @('127.0.0.1', 'localhost', '::1')) {
+        throw 'DB_HOST must remain local for the supported single-host development/staging runtime.'
     }
     $parsedDbPort = 0
     if (-not [int]::TryParse($dbPort, [ref]$parsedDbPort) -or $parsedDbPort -lt 1 -or $parsedDbPort -gt 65535) {
