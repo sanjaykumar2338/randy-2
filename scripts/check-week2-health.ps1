@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 [CmdletBinding()]
-param([string]$Environment, [int]$GamePort, [int]$TxAdminPort)
+param([string]$Environment, [int]$GamePort, [int]$TxAdminPort, [string]$HealthLogPath)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
@@ -18,6 +18,12 @@ $failures = 0
 function Pass([string]$Message) { Write-Host "[ok] $Message" }
 function Fail([string]$Message) { $script:failures++; Write-Host "[fail] $Message" }
 function Is-Private([string]$Address) { return $Address -in @('127.0.0.1','::1','::ffff:127.0.0.1') -or $Address -match '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)' }
+function ConvertFrom-TarrantLogLine([string]$Line) {
+    $jsonStart = $Line.IndexOf('{')
+    if ($jsonStart -lt 0) { return $null }
+    try { return $Line.Substring($jsonStart) | ConvertFrom-Json -ErrorAction Stop }
+    catch { return $null }
+}
 $service = Get-Service TarrantMariaDB -ErrorAction SilentlyContinue
 if ($service -and $service.Status -eq 'Running') { Pass 'TarrantMariaDB is running.' } else { Fail 'TarrantMariaDB is not running.' }
 $gameListeners = @(Get-NetTCPConnection -State Listen -LocalPort $GamePort -ErrorAction SilentlyContinue)
@@ -36,7 +42,29 @@ try {
     }
 } catch { Fail "FXServer info endpoint failed: $($_.Exception.Message)" }
 try { if ((Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$TxAdminPort/" -TimeoutSec 5).StatusCode -eq 200) { Pass 'txAdmin HTTP endpoint is healthy.' } } catch { Fail "txAdmin endpoint failed: $($_.Exception.Message)" }
-$log = Join-Path $repositoryRoot 'txData\default\logs\fxserver.log'
-if ((Test-Path $log) -and ((Get-Content $log -Tail 400) -match '\[tarrant_ops\].*health.startup.*Startup readiness passed')) { Pass 'tarrant_ops startup health log is present.' } else { Fail 'tarrant_ops startup health log is missing.' }
+$log = if ($HealthLogPath) { $HealthLogPath } else { Join-Path $repositoryRoot 'txData\default\logs\fxserver.log' }
+$startupEvents = @()
+if (Test-Path -LiteralPath $log -PathType Leaf) {
+    foreach ($line in Get-Content -LiteralPath $log -Tail 1000) {
+        $event = ConvertFrom-TarrantLogLine $line
+        if ($event -and $event.category -eq 'health.startup') { $startupEvents += $event }
+    }
+}
+if (-not $startupEvents) {
+    Fail 'tarrant_ops health.startup event is missing.'
+}
+else {
+    $startup = $startupEvents[-1]
+    $requiredStartupResources = @('ox_lib','oxmysql','qbx_core','qbx_vehicles','ox_target','ox_inventory','qbx_spawn','illenium-appearance','qbx_hud','pma-voice')
+    $healthFailuresBefore = $failures
+    if ($startup.message -ne 'Startup readiness passed') { Fail 'Latest tarrant_ops health.startup event did not report readiness success.' }
+    if ($startup.fields.healthy -isnot [bool] -or -not $startup.fields.healthy) { Fail 'Latest tarrant_ops health.startup event is not healthy.' }
+    if ($startup.fields.database -isnot [bool] -or -not $startup.fields.database) { Fail 'Latest tarrant_ops health.startup event reports database readiness failure.' }
+    foreach ($resource in $requiredStartupResources) {
+        $property = $startup.fields.resources.PSObject.Properties[$resource]
+        if (-not $property -or $property.Value -ne 'started') { Fail "Latest tarrant_ops health.startup event reports unhealthy resource: $resource." }
+    }
+    if ($failures -eq $healthFailuresBefore) { Pass 'Latest tarrant_ops structured health.startup event passed all readiness assertions.' }
+}
 if ($failures) { throw "Week 2 health check failed with $failures issue(s)." }
 Pass "Week 2 health/readiness checks passed for $Environment."
