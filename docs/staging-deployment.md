@@ -64,7 +64,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-fxserv
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-qbox-runtime.ps1
 ```
 
-The FXServer installer downloads only the pinned official Enhanced b129 archive and verifies the archive and executable hashes. The runtime installer fetches the pinned Qbox/OX releases, pma-voice recipe content, and project `tarrant_ops`, generates ignored configuration, and imports required schemas.
+The FXServer installer downloads only the pinned official Enhanced b129 archive and verifies the archive and executable hashes. The runtime installer fetches the pinned Qbox/OX releases, official pma-voice 7.0.1 source, and project `tarrant_ops`, generates ignored configuration, and imports required schemas. Upstream resources remain untracked; `runtime-manifest.json` records their source versions, commits, URLs, and downloaded archive hashes.
 
 ## F. Firewall
 

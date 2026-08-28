@@ -18,6 +18,7 @@ $ServerDataPath = [System.IO.Path]::GetFullPath($ServerDataPath)
 $runtimePrefix = [System.IO.Path]::GetFullPath($runtimeRoot).TrimEnd('\') + '\'
 $recipeCommit = 'a4be9fc715a2c749819f5a89b2c56c98289472a2'
 $cfxDataCommit = 'e265cb251c88260533c847d4a1a2838c7d828a66'
+$pmaVoiceCommit = '6c9d96ed7a02e30912f1a0ce92629bf9afbbca8c'
 if (-not $ServerDataPath.StartsWith($runtimePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "ServerDataPath must remain under the ignored runtime directory: $runtimeRoot"
 }
@@ -518,7 +519,8 @@ try {
         [pscustomobject]@{ Name='oxmysql'; Version='2.14.1'; Group='[ox]'; Url='https://github.com/overextended/oxmysql/releases/download/v2.14.1/oxmysql.zip' },
         [pscustomobject]@{ Name='ox_target'; Version='1.18.1'; Group='[ox]'; Url='https://github.com/overextended/ox_target/releases/download/v1.18.1/ox_target.zip' },
         [pscustomobject]@{ Name='ox_inventory'; Version='2.47.9'; Group='[ox]'; Url='https://github.com/overextended/ox_inventory/releases/download/v2.47.9/ox_inventory.zip' },
-        [pscustomobject]@{ Name='illenium-appearance'; Version='5.7.0'; Group='[standalone]'; Url='https://github.com/iLLeniumStudios/illenium-appearance/releases/download/v5.7.0/illenium-appearance.zip' }
+        [pscustomobject]@{ Name='illenium-appearance'; Version='5.7.0'; Group='[standalone]'; Url='https://github.com/iLLeniumStudios/illenium-appearance/releases/download/v5.7.0/illenium-appearance.zip' },
+        [pscustomobject]@{ Name='pma-voice'; Version='7.0.1'; Group='[standalone]'; Url="https://github.com/AvarianKnight/pma-voice/archive/$pmaVoiceCommit.zip"; ArchiveRoot="pma-voice-$pmaVoiceCommit" }
     )
 
     $packageEvidence = @()
@@ -529,6 +531,14 @@ try {
         $groupPath = Join-Path $resourcesRoot $package.Group
         Expand-ZipArchive -Archive $archivePath -Destination $groupPath
         $resourcePath = Join-Path $groupPath $package.Name
+        $archiveRootProperty = $package.PSObject.Properties['ArchiveRoot']
+        if ($archiveRootProperty) {
+            $archiveResourcePath = Join-Path $groupPath ([string]$archiveRootProperty.Value)
+            if (-not (Test-Path -LiteralPath $archiveResourcePath -PathType Container)) {
+                throw "The $($package.Name) archive did not contain the expected source directory."
+            }
+            Move-Item -LiteralPath $archiveResourcePath -Destination $resourcePath
+        }
         if (-not (Test-Path -LiteralPath (Join-Path $resourcePath 'fxmanifest.lua'))) {
             throw "The $($package.Name) archive did not contain the expected resource layout."
         }
@@ -590,7 +600,11 @@ try {
             'qbx_core: Discord rich presence disabled for Week 1',
             'ox_inventory: official item-name mismatches normalized to installed items'
         )
-        voice = 'deferred'
+        voice = [ordered]@{
+            name = 'pma-voice'
+            version = '7.0.1'
+            commit = $pmaVoiceCommit
+        }
     }
     [System.IO.File]::WriteAllText(
         (Join-Path $stageRoot 'runtime-manifest.json'),
