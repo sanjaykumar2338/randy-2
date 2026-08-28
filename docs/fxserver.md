@@ -68,8 +68,9 @@ Upstream resources remain outside Git. After staging the Qbox server-data tree o
 
 ```bash
 bash scripts/install-pma-voice.sh
+bash scripts/configure-runtime-identity.sh
 ```
 
-The helper installs official pma-voice 7.0.1 commit `6c9d96ed7a02e30912f1a0ce92629bf9afbbca8c` under the ignored runtime tree. Pass the server-data path as its sole argument when it is not `runtime/qbox-server-data`. The helper refuses to overwrite an existing pma-voice directory.
+The resource helper installs official pma-voice 7.0.1 commit `6c9d96ed7a02e30912f1a0ce92629bf9afbbca8c` under the ignored runtime tree. The identity helper reads only `APP_ENV`, `SERVER_NAME`, `SERVER_DESCRIPTION`, and `SERVER_TAGS` from the ignored `.env` and applies them to runtime `server.cfg`; it does not read or rewrite credentials. Pass the server-data path as the first argument when it is not `runtime/qbox-server-data`.
 
 Use the current official artifact list rather than assuming Windows build `25770` is still recommended for a future rebuild.

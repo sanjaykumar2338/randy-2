@@ -46,6 +46,12 @@ notepad .env
 
 Replace every `CHANGE_ME`. Set the approved name, description, tags and capacity. Keep `DB_HOST=127.0.0.1`, `TXADMIN_BIND_ADDRESS=127.0.0.1`, and `TXADMIN_URL=http://127.0.0.1:40120` for a single-host VPS. `FIVEM_BIND_ADDRESS=0.0.0.0` permits remote testers. Supply a fresh staging Cfx key only in ignored `.env`.
 
+On Linux, after the server-data tree exists, refresh its public identity from the ignored staging `.env` without reading or modifying credentials:
+
+```bash
+bash scripts/configure-runtime-identity.sh
+```
+
 ## D. Install Dependencies And Database
 
 ```powershell

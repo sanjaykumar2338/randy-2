@@ -338,7 +338,6 @@ function Write-LocalConfiguration {
 
     $development = @"
 # Environment-specific secrets for Tarrant County RP. This runtime directory is ignored by Git.
-setr tarrant_environment "$environmentName"
 set mysql_connection_string "host=$dbHost;port=$dbPort;user=$dbUser;password=$dbPassword;database=$dbName;charset=utf8mb4"
 $licenseLine
 "@
@@ -368,6 +367,7 @@ exec security.cfg
 exec discord.cfg
 exec permissions.cfg
 exec staff.cfg
+setr tarrant_environment "$environmentName"
 
 exec ox.cfg
 
