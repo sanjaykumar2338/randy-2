@@ -28,6 +28,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot 'public-listing-validation.ps1')
+
 $script:RepositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $script:Failures = 0
 $script:Secrets = [System.Collections.Generic.List[string]]::new()
@@ -43,6 +45,7 @@ $script:MissingIncludes = [System.Collections.Generic.List[string]]::new()
 $script:TemplateTokens = 0
 $script:VisitedConfigs = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 $script:TxAdminManagedOneSync = $false
+$script:ActiveEmptyMasterDirectives = [System.Collections.Generic.List[object]]::new()
 
 function Write-Ok {
     param([string]$Message)
@@ -524,6 +527,13 @@ function Read-FxConfig {
         }
         $script:ConfigSequence++
         $order = $script:ConfigSequence
+
+        if (Test-ActiveEmptySvMaster1Directive -Line $line) {
+            [void]$script:ActiveEmptyMasterDirectives.Add([pscustomobject]@{
+                Source = $fullPath
+                Line = $lineNumber
+            })
+        }
 
         if ($trimmed -match '\{\{[^}]+\}\}') {
             $script:TemplateTokens++
@@ -1108,6 +1118,10 @@ try {
         }
         if ($script:TemplateTokens -gt 0) {
             Write-FailStatus 'Startup config still contains undeployed txAdmin template tokens.'
+        }
+
+        if ($appEnvironment -in @('staging', 'production') -and $script:ActiveEmptyMasterDirectives.Count -gt 0) {
+            Write-FailStatus 'Public staging/production config must not activate sv_master1 ""; it disables Cfx server-list advertising.'
         }
 
         $unsafeConfigPaths = 0

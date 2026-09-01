@@ -5,6 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$ROOT_DIR/.env"
 FAILURES=0
 
+# shellcheck source=public-listing-validation.sh
+. "$ROOT_DIR/scripts/public-listing-validation.sh"
+
 find_mysql() {
   if [ -n "${MYSQL_BIN:-}" ] && [ -x "$MYSQL_BIN" ]; then
     printf '%s\n' "$MYSQL_BIN"
@@ -158,8 +161,23 @@ else
   fail "qbx_spawn not found; deploy the official Qbox txAdmin recipe"
 fi
 
-if [ -f "server.cfg" ] || [ -f "config/server.cfg" ]; then
+SERVER_CONFIG="${FXSERVER_CONFIG:-}"
+if [ -z "$SERVER_CONFIG" ]; then
+  if [ -f "server.cfg" ]; then SERVER_CONFIG="server.cfg"; else SERVER_CONFIG="config/server.cfg"; fi
+fi
+
+if [ -f "$SERVER_CONFIG" ]; then
   ok "Local FXServer config exists"
+  case "${APP_ENV:-development}" in
+    staging|production)
+      PUBLIC_LISTING_VISITED=""
+      if loaded_config_disables_public_listing "$SERVER_CONFIG" "$ROOT_DIR"; then
+        fail 'Public staging/production config must not activate sv_master1 ""; it disables Cfx server-list advertising'
+      else
+        ok "Loaded public config does not disable Cfx server-list advertising"
+      fi
+      ;;
+  esac
 else
   warn "Local FXServer config not found yet; txAdmin recipe will generate server.cfg"
 fi

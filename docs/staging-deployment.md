@@ -78,7 +78,7 @@ The FXServer installer downloads only the pinned official Enhanced b129 archive 
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\configure-staging-firewall.ps1
 ```
 
-This opens TCP/UDP 30120, blocks public MariaDB, and creates no public txAdmin rule. For VPN/private admin access only:
+This opens both TCP 30120 and UDP 30120 publicly, blocks public MariaDB, and creates no public txAdmin rule. Both protocols must be reachable from the Internet for normal FiveM connectivity and public listing. For VPN/private admin access only:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\configure-staging-firewall.ps1 -TxAdminRemoteAddress <APPROVED_IP_OR_CIDR>
@@ -105,6 +105,8 @@ Get-NetUDPEndpoint -LocalPort 30120
 Invoke-RestMethod http://127.0.0.1:30120/info.json
 Invoke-RestMethod http://127.0.0.1:30120/players.json
 ```
+
+For a publicly listed staging or production server, no loaded configuration file may contain an active `sv_master1 ""` directive. Commented examples are harmless, but an active directive disables Cfx server-list advertising. After correcting the loaded configuration and restarting FXServer, allow several minutes for the server to appear in the public list.
 
 ## I. Remote Acceptance
 

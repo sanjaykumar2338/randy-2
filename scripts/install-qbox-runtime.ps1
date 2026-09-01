@@ -344,10 +344,21 @@ $licenseLine
     [System.IO.File]::WriteAllText($developmentConfig, $development, [System.Text.UTF8Encoding]::new($false))
     Protect-SecretFile -Path $developmentConfig
 
+    $listingDirective = if ($environmentName -eq 'development') {
+        @"
+# Development-only: suppress public Cfx listing for this loopback profile.
+sv_master1 ""
+"@
+    }
+    else {
+        '# Public staging/production: do not set sv_master1 "".'
+    }
+
     $serverConfig = @"
 # Tarrant County RP Phase 1 runtime derived from the official Qbox lean recipe.
 endpoint_add_tcp "${bindAddress}:$gamePort"
 endpoint_add_udp "${bindAddress}:$gamePort"
+$listingDirective
 
 sv_maxclients $maxClients
 # txAdmin manages OneSync for this profile.
