@@ -9,6 +9,8 @@ FAILURES=0
 . "$ROOT_DIR/scripts/public-listing-validation.sh"
 # shellcheck source=dotenv-utils.sh
 . "$ROOT_DIR/scripts/dotenv-utils.sh"
+# shellcheck source=fxserver-linux-artifact-validation.sh
+. "$ROOT_DIR/scripts/fxserver-linux-artifact-validation.sh"
 
 find_mysql() {
   if [ -n "${MYSQL_BIN:-}" ] && [ -x "$MYSQL_BIN" ]; then
@@ -93,12 +95,13 @@ case "$(uname -s)" in
     fail "FXServer is not supported natively on this macOS host; use Windows/Linux for Week 1 runtime testing"
     ;;
   Linux)
-    if [ -x "$FXSERVER_RUN_SH" ]; then
-      ok "FXServer Linux run script exists: $FXSERVER_RUN_SH"
-    elif [ -x "$ROOT_DIR/../server/run.sh" ]; then
-      ok "FXServer Linux run script exists: $ROOT_DIR/../server/run.sh"
+    if ARTIFACT_RESULT="$(validate_pinned_fxserver_linux_artifact "$ROOT_DIR" "$FXSERVER_RUN_SH")"; then
+      IFS='|' read -r ARTIFACT_BUILD ARTIFACT_LAUNCHER ARTIFACT_VERIFICATION <<EOF
+$ARTIFACT_RESULT
+EOF
+      ok "Pinned Enhanced Linux build $ARTIFACT_BUILD validated ($ARTIFACT_VERIFICATION): $ARTIFACT_LAUNCHER"
     else
-      fail "FXServer Linux artifact not found; set FXSERVER_RUN_SH after installing the latest recommended artifact"
+      fail "Pinned Enhanced Linux artifact validation failed"
     fi
     ;;
   MINGW*|MSYS*|CYGWIN*)

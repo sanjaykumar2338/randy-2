@@ -3,8 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$ROOT_DIR/.env"
+FXSERVER_RUN_SH=""
 # shellcheck source=dotenv-utils.sh
 . "$ROOT_DIR/scripts/dotenv-utils.sh"
+# shellcheck source=fxserver-linux-artifact-validation.sh
+. "$ROOT_DIR/scripts/fxserver-linux-artifact-validation.sh"
 
 find_mysql() {
   if [ -n "${MYSQL_BIN:-}" ] && [ -x "$MYSQL_BIN" ]; then
@@ -126,10 +129,13 @@ case "$(uname -s)" in
     status_warn "FXServer does not have a native macOS server setup path in the Cfx.re docs; use Windows/Linux for server runtime"
     ;;
   Linux)
-    if [ -n "${FXSERVER_RUN_SH:-}" ] && [ -x "$FXSERVER_RUN_SH" ]; then
-      status_ok "FXServer run script configured: $FXSERVER_RUN_SH"
+    if ARTIFACT_RESULT="$(validate_pinned_fxserver_linux_artifact "$ROOT_DIR" "$FXSERVER_RUN_SH")"; then
+      IFS='|' read -r ARTIFACT_BUILD ARTIFACT_LAUNCHER ARTIFACT_VERIFICATION <<EOF
+$ARTIFACT_RESULT
+EOF
+      status_ok "Pinned Enhanced Linux build $ARTIFACT_BUILD validated ($ARTIFACT_VERIFICATION): $ARTIFACT_LAUNCHER"
     else
-      status_warn "FXServer artifacts not configured; set FXSERVER_RUN_SH after installing the latest recommended Linux artifact"
+      status_warn "Pinned Enhanced Linux artifact validation failed"
     fi
     ;;
   MINGW*|MSYS*|CYGWIN*)

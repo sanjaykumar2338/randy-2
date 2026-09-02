@@ -9,7 +9,7 @@
 
 The Phase 1 foundation accepts a real FiveM for GTA V Enhanced client connection on the official Enhanced Linux b139 artifact. The previous `bad_request` failure is gone, the public game endpoint responds, OneSync is enabled, all required Phase 1 resources are advertised by the live endpoint, and the operator-observed session reached character creation and appeared in txAdmin.
 
-This is not an unconditional PASS. The auditor had no authenticated VPS shell or desktop control, so current systemd state, localhost endpoints, MariaDB contents, private-file permissions, full logs, a controlled restart, and visual/gameplay behavior could not be independently rechecked. Public Cfx registration also remains absent: the single-server API returned HTTP 404. That does not invalidate the proven direct Enhanced connection.
+This is not an unconditional PASS. After commits `886518f` and `56bdbbb` were deployed, the operator completed a controlled live restart: txAdmin recovered; TCP/UDP 30120 and TCP 40120 listened; local/public `info.json` passed; MariaDB reconnected; all required resources started; and `tarrant_ops` reported startup readiness, `healthy=true`, and `database=true`. Gameplay persistence, UI, chat and two-player voice remain unverified. Public Cfx registration also remains absent: the single-server API returned HTTP 404. That does not invalidate the proven direct Enhanced connection.
 
 Repository deployment defects found during this audit were fixed in commit `56bdbbb`: the Linux service can now be rendered with b139-compatible `TXHOST_*` settings and no deprecated txAdmin ConVars, while Linux checks parse `.env` without executing it and locate resources in the deployed runtime.
 
@@ -33,12 +33,12 @@ Evidence labels: **automated-public** was independently obtained over the networ
 
 | Area | Result | Evidence |
 | --- | --- | --- |
-| 1. Host / service | PARTIAL | **operator-live:** txAdmin online on b139 with `TXHOST_TXA_PORT=40120`, `TXHOST_DATA_PATH=/opt/randy-2/txData`, and launcher-only ExecStart. **automated-public:** TCP 30120 and 40120 accepted connections; txAdmin returned HTTP 200. Process tree, loop detection, UDP listener and resolved symlink require VPS shell. |
-| 2. FiveM endpoints | PARTIAL | **automated-public:** `info.json` and `dynamic.json` HTTP 200; expected name, description, tags, 8 slots, OneSync `true`, 17 advertised resources, and one connected client. Localhost endpoints were unavailable. No explicit Enhanced-host-support field was returned; b139 and the successful Enhanced client provide separate evidence. |
+| 1. Host / service | PASS | **operator-live restart:** `txadmin.service` restarted successfully; txAdmin responded; TCP/UDP 30120 and TCP 40120 listened on b139. **automated-public:** TCP 30120/40120 accepted connections and txAdmin returned HTTP 200. |
+| 2. FiveM endpoints | PASS | **operator-live restart:** local and public `info.json` passed after restart; TCP/UDP 30120 listened. **automated-public:** `info.json` and `dynamic.json` HTTP 200; expected name, description, tags, 8 slots, OneSync `true`, 17 advertised resources, and one connected client. |
 | 3. Cfx / Enhanced | PARTIAL | **automated-public:** Cfx single-server API lookup for the endpoint returned HTTP 404. **operator-live:** Enhanced direct connection succeeded and `bad_request` no longer occurs. Public browser registration is not proven. |
-| 4. Database | PARTIAL | **operator-live:** MariaDB/oxmysql connected, `database=true`, character-creation event recorded. **automated-public:** TCP 3306 was not publicly reachable. Database/schema/character queries were not run without VPS access. |
-| 5. Required resources | PASS | **automated-public:** live `info.json` advertised `oxmysql`, `ox_lib`, `ox_inventory`, `ox_target`, `qbx_core`, `qbx_spawn`, `qbx_hud`, `qbx_vehicles`, `illenium-appearance`, `pma-voice`, and `tarrant_ops`. |
-| 6. tarrant_ops | PARTIAL | **operator-live:** staging, startup readiness passed, database/healthy/required-resource health true, and character event logged. Recent structured log was not independently read. |
+| 4. Database | PARTIAL | **operator-live restart:** MariaDB/oxmysql reconnected, `database=true`, and `ox_inventory` loaded 301 items. **automated-public:** TCP 3306 was not publicly reachable. Current schema/character contents still require a safe database check. |
+| 5. Required resources | PASS | **operator-live restart:** all 11 required resources started. **automated-public:** live `info.json` advertised `oxmysql`, `ox_lib`, `ox_inventory`, `ox_target`, `qbx_core`, `qbx_spawn`, `qbx_hud`, `qbx_vehicles`, `illenium-appearance`, `pma-voice`, and `tarrant_ops`. |
+| 6. tarrant_ops | PASS | **operator-live restart:** staging startup readiness passed with `healthy=true`, `database=true`, and all required live resources started; operational character event evidence was previously recorded. |
 | 7. Character system | PARTIAL | **operator-live:** client connected, appeared in txAdmin, and reached character creation; creation event was recorded. Character load, row contents, and starting money need the manual test/query below. |
 | 8. Persistence | MANUAL TEST REQUIRED | No current disconnect/reconnect evidence for the new staging character was available. Repository historical evidence does not substitute for this deployment. |
 | 9. Inventory | PARTIAL | **automated-public:** `ox_inventory` advertised. **operator-live:** 301 item definitions loaded. UI and current-character persistence need manual testing. |
@@ -95,7 +95,7 @@ Do not manufacture balances/items or edit database rows to make these pass.
 
 ## 7. Controlled restart
 
-No restart was performed: authenticated VPS access was unavailable. After deploying the repository unit, perform one controlled restart during an empty maintenance window and then rerun readiness. Character persistence across that restart is not accepted until the client reconnects or a safe database query confirms it.
+A controlled live restart was performed after deploying commits `886518f` and `56bdbbb`. `txadmin.service`, txAdmin HTTP, TCP/UDP 30120, TCP 40120, local/public `info.json`, MariaDB/oxmysql, all required resources and `tarrant_ops` health recovered successfully. **Restart acceptance: PASS.** Character persistence across the restart is not accepted because the client has not yet completed the required reconnect/persistence test.
 
 ## 8. Safe VPS deployment and verification commands
 
@@ -186,4 +186,4 @@ Not passed:
 
 **PHASE 1: CONDITIONAL PASS**
 
-The technical foundation is suitable to prepare Phase 2 work, but Phase 2 should not be declared operationally started until the same staging character passes reconnect persistence, HUD/inventory/chat/appearance checks, a two-player voice test is scheduled, commit `56bdbbb` is deployed, and one controlled post-deployment restart passes. Public Cfx listing is accurately recorded as HTTP 404; it is not a blocker to the proven Enhanced direct-connect path.
+The technical foundation is suitable to prepare Phase 2 work, but Phase 2 should not be declared operationally started until the same staging character passes reconnect persistence, HUD/inventory/chat/appearance checks, and a two-player voice test. The repository deployment commits and controlled restart now pass. Public Cfx listing is accurately recorded as HTTP 404; it is not a blocker to the proven Enhanced direct-connect path.
