@@ -1,0 +1,12 @@
+{
+  "product": "FiveM for GTAV Enhanced Cfx Server for Linux x64",
+  "channel": "enhanced",
+  "build": 139,
+  "archiveName": "cfx-server_linux_x64.tar.xz",
+  "officialSource": "https://downloads.cfx-services.net/prod/01a05860-423e-79d7-ab9c-5b3fb86640b8/cfx-server_linux_x64.tar.xz",
+  "archiveSha256": "552E701CAF22B06867BC8943DCF3ABF7A1AB8B9BE786DB13E42338B8684CFE6A",
+  "launcher": "run.sh",
+  "executable": "alpine/opt/cfx-server/cfx-server",
+  "verifiedOn": "2026-09-02",
+  "notes": "Pinned from the FiveM for GTAV Enhanced Linux selection on the official Cfx Server Download page. Enhanced build 139 is a different product line from legacy master build 35245."
+}

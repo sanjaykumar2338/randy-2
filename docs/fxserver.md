@@ -1,6 +1,8 @@
 # FXServer Development Notes
 
-The original local Phase 1 gameplay acceptance used Enhanced FXServer `b127`. Legacy artifact `25770` is a different, non-Enhanced line and is not the deployment target. Because Cfx no longer exposes b127 through its official resolver, the tracked artifact manifest pins official Enhanced `b129`, which passed the full server-side Phase 1 readiness suite on 2026-08-24. Archives and extracted binaries remain ignored.
+The original local Phase 1 gameplay acceptance used Enhanced FXServer `b127`. Legacy artifact `25770` is a different, non-Enhanced line and is not the deployment target. Because Cfx no longer exposes b127 through its official resolver, the tracked Windows artifact manifest pins official Enhanced `b129`, which passed the full server-side Phase 1 readiness suite on 2026-08-24.
+
+FiveM for GTAV Enhanced uses a separate Cfx Server product line. The official download page currently offers Enhanced Linux `cfx-server_linux_x64.tar.xz` build `139`; legacy Linux `fx.tar.xz` master build `35245` is not the Enhanced package even though both can report familiar FXServer metadata. `config/fxserver-linux-artifact.json` pins the official Enhanced Linux build 139 URL and verified checksum as of 2026-09-02. Re-check the official Server Download page before deliberately selecting a later Enhanced build. Archives and extracted binaries remain ignored.
 
 Official references:
 
@@ -9,6 +11,7 @@ Official references:
 - [txAdmin documentation](https://docs.fivem.net/docs/resources/txAdmin/)
 - [Windows artifacts](https://runtime.fivem.net/artifacts/fivem/build_server_windows/master/)
 - [Linux artifacts](https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/)
+- [Official Cfx Server Download selector](https://docs.fivem.net/docs/server-download/)
 
 ## Local Windows Layout
 
@@ -63,6 +66,14 @@ For a separate Linux host, download the current recommended Linux artifact and k
 cd /path/to/server-data
 /path/to/fxserver/run.sh +exec server.cfg
 ```
+
+For the pinned and checksum-verified Linux build, install it side-by-side without switching the service:
+
+```bash
+bash scripts/install-fxserver-linux.sh
+```
+
+The default destination includes the Enhanced build identity under ignored `server-binaries/`. The installer refuses to replace any existing destination and never reads or writes `runtime/qbox-server-data`, `txData`, resources, database data, `.env`, or private cfg files. Switching the supervised service is a separate reviewed operation; retain the old directory until startup, direct-connect, resource-health, and listing diagnostics are complete.
 
 Upstream resources remain outside Git. After staging the Qbox server-data tree on Linux, install the Phase 1 pinned pma-voice dependency with:
 
