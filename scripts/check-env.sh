@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$ROOT_DIR/.env"
+# shellcheck source=dotenv-utils.sh
+. "$ROOT_DIR/scripts/dotenv-utils.sh"
 
 find_mysql() {
   if [ -n "${MYSQL_BIN:-}" ] && [ -x "$MYSQL_BIN" ]; then
@@ -87,15 +89,12 @@ MYSQL="$(find_mysql)" || status_fail "MariaDB/MySQL client not found"
 status_ok "MariaDB/MySQL client: $("$MYSQL" --version)"
 
 if [ -f "$ENV_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
-  set +a
-
-  DB_HOST="${DB_HOST:-127.0.0.1}"
-  DB_PORT="${DB_PORT:-3306}"
-  DB_NAME="${DB_NAME:-tarrant_rp_dev}"
-  DB_USER="${DB_USER:-tarrant_rp}"
+  DB_HOST="$(dotenv_default "$ENV_FILE" DB_HOST 127.0.0.1)"
+  DB_PORT="$(dotenv_default "$ENV_FILE" DB_PORT 3306)"
+  DB_NAME="$(dotenv_default "$ENV_FILE" DB_NAME tarrant_rp_dev)"
+  DB_USER="$(dotenv_default "$ENV_FILE" DB_USER tarrant_rp)"
+  DB_PASSWORD="$(dotenv_default "$ENV_FILE" DB_PASSWORD '')"
+  FXSERVER_RUN_SH="$(project_path "$ROOT_DIR" "$(dotenv_default "$ENV_FILE" FXSERVER_RUN_SH '')")"
 
   if [ "${DB_PASSWORD:-CHANGE_ME}" = "CHANGE_ME" ] || [ -z "${DB_PASSWORD:-}" ]; then
     status_fail ".env exists but DB_PASSWORD is not configured"

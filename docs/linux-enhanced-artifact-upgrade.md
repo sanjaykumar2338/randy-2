@@ -15,6 +15,22 @@ sudo -u "$PROJECT_OWNER" bash scripts/install-fxserver-linux.sh
 
 This creates `server-binaries/enhanced-linux-139` and refuses to overwrite it. It does not touch `runtime/qbox-server-data`, `txData`, resources, MariaDB, `.env`, or any private cfg.
 
+Enhanced b139 txAdmin uses `TXHOST_TXA_PORT` and `TXHOST_DATA_PATH`. Do not restore the deprecated `+set txAdminPort`, `+set txDataPath`, or `+set serverProfile` launch arguments. Render and inspect the repository-owned unit before installing it:
+
+```bash
+cd /opt/randy-2
+PROJECT_ROOT=/opt/randy-2 SERVICE_USER="$(stat -c '%U' /opt/randy-2)" \
+  bash scripts/render-txadmin-systemd.sh /tmp/txadmin.service
+grep -E '^(Environment=TXHOST_|ExecStart=)' /tmp/txadmin.service
+! grep -Eq '\+set[[:space:]]+(txAdminPort|txDataPath|serverProfile)' /tmp/txadmin.service
+sudo install -m 0644 /tmp/txadmin.service /etc/systemd/system/txadmin.service
+rm -f /tmp/txadmin.service
+sudo systemctl daemon-reload
+sudo systemctl enable txadmin.service
+```
+
+This unit deliberately starts only `server-binaries/enhanced-129/run.sh`; txAdmin obtains its port and data path from `TXHOST_*`. The Linux readiness check reads `.env` as literal data (so metadata containing spaces is safe) and resolves `QBOX_RESOURCES_DIR` to the deployed runtime.
+
 Before switching, confirm that `txadmin.service` currently refers to `/opt/randy-2/server-binaries/enhanced-129` without printing the unit contents:
 
 ```bash

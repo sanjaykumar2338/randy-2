@@ -7,6 +7,8 @@ FAILURES=0
 
 # shellcheck source=public-listing-validation.sh
 . "$ROOT_DIR/scripts/public-listing-validation.sh"
+# shellcheck source=dotenv-utils.sh
+. "$ROOT_DIR/scripts/dotenv-utils.sh"
 
 find_mysql() {
   if [ -n "${MYSQL_BIN:-}" ] && [ -x "$MYSQL_BIN" ]; then
@@ -68,12 +70,30 @@ cd "$ROOT_DIR"
 
 ok "Repository root: $ROOT_DIR"
 
+if [ -f "$ENV_FILE" ]; then
+  ok ".env exists locally"
+else
+  fail ".env is missing; copy .env.example or run scripts/setup-dev-db.sh"
+fi
+
+APP_ENV="$(dotenv_default "$ENV_FILE" APP_ENV development)"
+DB_HOST="$(dotenv_default "$ENV_FILE" DB_HOST 127.0.0.1)"
+DB_PORT="$(dotenv_default "$ENV_FILE" DB_PORT 3306)"
+DB_NAME="$(dotenv_default "$ENV_FILE" DB_NAME tarrant_rp_dev)"
+DB_USER="$(dotenv_default "$ENV_FILE" DB_USER tarrant_rp)"
+DB_PASSWORD="$(dotenv_default "$ENV_FILE" DB_PASSWORD '')"
+FXSERVER_RUN_SH="$(project_path "$ROOT_DIR" "$(dotenv_default "$ENV_FILE" FXSERVER_RUN_SH '')")"
+FXSERVER_EXE="$(project_path "$ROOT_DIR" "$(dotenv_default "$ENV_FILE" FXSERVER_EXE '')")"
+QBOX_RESOURCES_DIR="$(project_path "$ROOT_DIR" "$(dotenv_default "$ENV_FILE" QBOX_RESOURCES_DIR runtime/qbox-server-data/resources)")"
+FXSERVER_CONFIG="$(project_path "$ROOT_DIR" "$(dotenv_default "$ENV_FILE" FXSERVER_CONFIG runtime/qbox-server-data/server.cfg)")"
+TXADMIN_URL="$(dotenv_default "$ENV_FILE" TXADMIN_URL '')"
+
 case "$(uname -s)" in
   Darwin)
     fail "FXServer is not supported natively on this macOS host; use Windows/Linux for Week 1 runtime testing"
     ;;
   Linux)
-    if [ -n "${FXSERVER_RUN_SH:-}" ] && [ -x "$FXSERVER_RUN_SH" ]; then
+    if [ -x "$FXSERVER_RUN_SH" ]; then
       ok "FXServer Linux run script exists: $FXSERVER_RUN_SH"
     elif [ -x "$ROOT_DIR/../server/run.sh" ]; then
       ok "FXServer Linux run script exists: $ROOT_DIR/../server/run.sh"
@@ -82,7 +102,7 @@ case "$(uname -s)" in
     fi
     ;;
   MINGW*|MSYS*|CYGWIN*)
-    if [ -n "${FXSERVER_EXE:-}" ] && [ -f "$FXSERVER_EXE" ]; then
+    if [ -f "$FXSERVER_EXE" ]; then
       ok "FXServer Windows executable exists: $FXSERVER_EXE"
     elif [ -f "$ROOT_DIR/../server/FXServer.exe" ]; then
       ok "FXServer Windows executable exists: $ROOT_DIR/../server/FXServer.exe"
@@ -95,16 +115,6 @@ case "$(uname -s)" in
     ;;
 esac
 
-if [ -f "$ENV_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
-  set +a
-  ok ".env exists locally"
-else
-  fail ".env is missing; copy .env.example or run scripts/setup-dev-db.sh"
-fi
-
 MYSQL="$(find_mysql)" || MYSQL=""
 if [ -n "$MYSQL" ]; then
   ok "MariaDB client: $("$MYSQL" --version)"
@@ -112,12 +122,7 @@ else
   fail "MariaDB client not found"
 fi
 
-DB_HOST="${DB_HOST:-127.0.0.1}"
-DB_PORT="${DB_PORT:-3306}"
-DB_NAME="${DB_NAME:-tarrant_rp_dev}"
-DB_USER="${DB_USER:-tarrant_rp}"
-
-if [ -z "${DB_PASSWORD:-}" ] || [ "${DB_PASSWORD:-CHANGE_ME}" = "CHANGE_ME" ]; then
+if [ -z "$DB_PASSWORD" ] || [ "$DB_PASSWORD" = "CHANGE_ME" ]; then
   fail "DB_PASSWORD is not configured in .env"
 elif [ -n "$MYSQL" ]; then
   SERVER_VERSION="$(MYSQL_PWD="$DB_PASSWORD" "$MYSQL" --protocol=tcp --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" "$DB_NAME" \
@@ -143,32 +148,22 @@ else
   fail ".env is not ignored by Git"
 fi
 
-if [ -d "resources/[qbx]/qbx_core" ]; then
-  ok "qbx_core resource found"
-else
-  fail "qbx_core not found; deploy the official Qbox txAdmin recipe"
-fi
+for resource in oxmysql ox_lib ox_inventory ox_target qbx_core qbx_spawn qbx_hud qbx_vehicles illenium-appearance pma-voice tarrant_ops; do
+  if find "$QBOX_RESOURCES_DIR" -mindepth 1 -maxdepth 3 -type d -name "$resource" -print -quit 2>/dev/null | grep -q .; then
+    ok "$resource resource found in deployed runtime"
+  else
+    fail "$resource not found under deployed runtime resources: $QBOX_RESOURCES_DIR"
+  fi
+done
 
-if [ -d "resources/[ox]/ox_inventory" ]; then
-  ok "ox_inventory resource found"
-else
-  fail "ox_inventory not found; deploy the official Qbox txAdmin recipe"
-fi
-
-if [ -d "resources/[qbx]/qbx_spawn" ]; then
-  ok "qbx_spawn resource found"
-else
-  fail "qbx_spawn not found; deploy the official Qbox txAdmin recipe"
-fi
-
-SERVER_CONFIG="${FXSERVER_CONFIG:-}"
+SERVER_CONFIG="$FXSERVER_CONFIG"
 if [ -z "$SERVER_CONFIG" ]; then
   if [ -f "server.cfg" ]; then SERVER_CONFIG="server.cfg"; else SERVER_CONFIG="config/server.cfg"; fi
 fi
 
 if [ -f "$SERVER_CONFIG" ]; then
   ok "Local FXServer config exists"
-  case "${APP_ENV:-development}" in
+  case "$APP_ENV" in
     staging|production)
       PUBLIC_LISTING_VISITED=""
       if loaded_config_disables_public_listing "$SERVER_CONFIG" "$ROOT_DIR"; then
