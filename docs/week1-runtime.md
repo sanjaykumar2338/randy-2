@@ -119,7 +119,7 @@ The post-restart client session completed and loaded the expected character. The
 
 ## Backup And Restore
 
-Run `scripts\backup-dev.ps1` to create a timestamped backup under ignored `artifacts\backups`. It includes redacted operational configuration, `[tarrant]` resources, and a private SQL dump while excluding `.env`, `development.cfg`, license keys, passwords, and txAdmin credentials. Stop FXServer and take a fresh backup before restoring; then review/copy configuration and resources and import the SQL using ignored local `.env` credentials. Each backup includes `RESTORE.txt`.
+Run `scripts\backup-dev.ps1` to create a timestamped backup under ignored `artifacts\backups`. It includes redacted operational configuration, `[tarrant]` resources, and a private SQL dump while excluding `.env`, environment-specific `*.private.cfg`, license keys, passwords, and txAdmin credentials. Stop FXServer and take a fresh backup before restoring; then review/copy configuration and resources and import the SQL using ignored local `.env` credentials. Each backup includes `RESTORE.txt`.
 
 The Week 1 playable foundation is complete. Post-restart character loading and persistence passed. Two-player voice communication remains explicitly untested and is tracked separately because it requires a second player.
 

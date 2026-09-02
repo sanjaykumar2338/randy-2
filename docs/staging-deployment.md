@@ -72,6 +72,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-qbox-r
 
 The FXServer installer downloads only the pinned official Enhanced b129 archive and verifies the archive and executable hashes. The runtime installer fetches the pinned Qbox/OX releases, official pma-voice 7.0.1 source, and project `tarrant_ops`, generates ignored configuration, and imports required schemas. Upstream resources remain untracked; `runtime-manifest.json` records their source versions, commits, URLs, and downloaded archive hashes.
 
+The generated `server.cfg` executes an environment-specific ignored credential file: `development.private.cfg`, `staging.private.cfg`, or `production.private.cfg`. These files contain the scoped database connection and Cfx license directive and must never be tracked or displayed. Shared `base.cfg` is environment-neutral; `server.cfg` is the single source of the `tarrant_environment` marker.
+
+For a runtime created before environment-specific private files were introduced, run `bash scripts/migrate-runtime-environment.sh staging runtime/qbox-server-data` once before restarting. It copies only the existing database and license directives into ignored `staging.private.cfg`, removes stale shared environment markers, and leaves the legacy credential file retained but unloaded.
+
 ## F. Firewall
 
 ```powershell

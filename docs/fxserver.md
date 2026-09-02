@@ -53,7 +53,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-qbox-r
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\check-qbox-readiness.ps1
 ```
 
-The generated runtime `server.cfg` binds the game endpoint to `127.0.0.1:30120`, enables OneSync, loads secrets from ignored `development.cfg`, and starts the minimum resources in explicit dependency order.
+The generated development runtime `server.cfg` binds the game endpoint to `127.0.0.1:30120`, enables OneSync, loads secrets from ignored `development.private.cfg`, and starts the minimum resources in explicit dependency order. Staging and production use their matching ignored private configuration names.
 
 ## Cross-Platform Reference
 

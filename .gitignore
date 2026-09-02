@@ -5,6 +5,7 @@
 !.env.staging.example
 server.cfg
 secrets.cfg
+*.private.cfg
 permissions.cfg
 staff.cfg
 discord.cfg

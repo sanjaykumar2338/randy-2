@@ -327,7 +327,8 @@ function Write-LocalConfiguration {
     foreach ($settingValue in @($serverName, $serverDescription, $serverTags, $environmentName)) {
         if ($settingValue -match '[\r\n"]') { throw 'Server identity settings cannot contain quotes or line breaks.' }
     }
-    $developmentConfig = Join-Path $DataPath 'development.cfg'
+    $privateConfigName = "$environmentName.private.cfg"
+    $privateConfig = Join-Path $DataPath $privateConfigName
     $licenseLine = '# MANUAL ACTION REQUIRED: add sv_licenseKey after placing FIVEM_LICENSE_KEY in .env.'
     if ($Settings.ContainsKey('FIVEM_LICENSE_KEY') -and $Settings.FIVEM_LICENSE_KEY -and $Settings.FIVEM_LICENSE_KEY -ne 'CHANGE_ME') {
         if ($Settings.FIVEM_LICENSE_KEY -notmatch '^cfxk_[A-Za-z0-9_-]+$') {
@@ -336,13 +337,13 @@ function Write-LocalConfiguration {
         $licenseLine = 'sv_licenseKey "{0}"' -f $Settings.FIVEM_LICENSE_KEY
     }
 
-    $development = @"
-# Environment-specific secrets for Tarrant County RP. This runtime directory is ignored by Git.
+    $privateConfiguration = @"
+# Private $environmentName credentials for Tarrant County RP. This runtime directory is ignored by Git.
 set mysql_connection_string "host=$dbHost;port=$dbPort;user=$dbUser;password=$dbPassword;database=$dbName;charset=utf8mb4"
 $licenseLine
 "@
-    [System.IO.File]::WriteAllText($developmentConfig, $development, [System.Text.UTF8Encoding]::new($false))
-    Protect-SecretFile -Path $developmentConfig
+    [System.IO.File]::WriteAllText($privateConfig, $privateConfiguration, [System.Text.UTF8Encoding]::new($false))
+    Protect-SecretFile -Path $privateConfig
 
     $listingDirective = if ($environmentName -eq 'development') {
         @"
@@ -371,7 +372,7 @@ sets sv_projectName "$serverName"
 sets sv_projectDesc "$serverDescription"
 sets locale "en-US"
 load_server_icon myLogo.png
-exec development.cfg
+exec $privateConfigName
 exec voice.cfg
 exec base.cfg
 exec security.cfg

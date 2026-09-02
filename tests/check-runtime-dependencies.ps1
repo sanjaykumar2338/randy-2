@@ -26,6 +26,8 @@ $checks = @(
     @{ Name = 'runtime installer validates each downloaded resource manifest'; Passed = $installer -match 'Join-Path \$resourcePath ''fxmanifest\.lua''' },
     @{ Name = 'base configuration is environment-neutral'; Passed = $baseConfig -notmatch '(?m)^\s*setr\s+tarrant_environment\b' },
     @{ Name = 'development template retains its environment marker'; Passed = $serverConfig -match '(?m)^setr tarrant_environment "development"\s*$' },
+    @{ Name = 'PowerShell generation selects an environment-specific private config'; Passed = $installer -match '\$privateConfigName = "\$environmentName\.private\.cfg"' -and $installer -match 'exec \$privateConfigName' },
+    @{ Name = 'PowerShell generation never hard-codes the legacy development config'; Passed = $installer -notmatch 'exec development\.cfg' },
     @{ Name = 'PowerShell generation applies the selected environment after shared configuration'; Passed = $installer -match 'exec staff\.cfg\s+setr tarrant_environment "\$environmentName"' },
     @{ Name = 'Linux identity refresh reads only named non-secret settings'; Passed = $linuxIdentity -match 'read_setting APP_ENV' -and $linuxIdentity -match 'read_setting SERVER_NAME' },
     @{ Name = 'Linux identity refresh updates the environment marker'; Passed = $linuxIdentity -match 'setr tarrant_environment' }

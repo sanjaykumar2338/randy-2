@@ -8,7 +8,7 @@ Week 2 builds on the accepted Week 1 gameplay runtime without adding economy, de
 
 The generated runtime loads configuration in this order:
 
-1. ignored `development.cfg` and `voice.cfg` for credentials and local settings;
+1. ignored environment-specific `*.private.cfg` and `voice.cfg` for credentials and local settings;
 2. tracked-template-derived `base.cfg` and `security.cfg`;
 3. `discord.cfg`, `permissions.cfg`, and ignored `staff.cfg`;
 4. upstream-derived `ox.cfg`;
@@ -57,7 +57,7 @@ After review, restore only into an explicitly named database:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\restore-dev.ps1 -BackupPath .\artifacts\backups\<timestamp> -Apply -TargetDatabase tarrant_rp_restore_review
 ```
 
-Backups include redacted operational configuration, project resources, a MariaDB dump, restore instructions, and a SHA-256 manifest. They exclude `.env`, `development.cfg`, txAdmin state, passwords, license keys, and webhook secrets. Config and resources remain review-and-copy operations; the restore script never overwrites the live runtime.
+Backups include redacted operational configuration, project resources, a MariaDB dump, restore instructions, and a SHA-256 manifest. They exclude `.env`, environment-specific `*.private.cfg`, txAdmin state, passwords, license keys, and webhook secrets. Config and resources remain review-and-copy operations; the restore script never overwrites the live runtime.
 
 ## Health Check
 

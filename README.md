@@ -89,4 +89,4 @@ Fresh Windows staging deployment is documented in `docs/staging-deployment.md`.
 
 ## Security
 
-Never commit Cfx.re keys, database/admin passwords, Discord credentials, Tebex secrets, private database exports, downloaded binaries, txAdmin state, or generated runtime data. Tracked `*.example.*` files contain placeholders only; real values belong in ignored `.env`, `development.cfg`, or txAdmin files.
+Never commit Cfx.re keys, database/admin passwords, Discord credentials, Tebex secrets, private database exports, downloaded binaries, txAdmin state, or generated runtime data. Tracked `*.example.*` files contain placeholders only; real values belong in ignored `.env`, environment-specific `*.private.cfg`, or txAdmin files.

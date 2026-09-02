@@ -47,7 +47,7 @@ try {
 finally {
     if ($hadPassword) { $env:MYSQL_PWD = $oldPassword } else { Remove-Item Env:\MYSQL_PWD -ErrorAction SilentlyContinue }
 }
-[System.IO.File]::WriteAllText((Join-Path $backupRoot 'RESTORE.txt'), "This backup excludes .env, development.cfg, txAdmin state, license keys, and passwords.`r`nStop FXServer and make a fresh backup before restoring. Review and copy config/resources, then import the SQL dump using ignored local .env credentials.`r`n", [System.Text.UTF8Encoding]::new($false))
+[System.IO.File]::WriteAllText((Join-Path $backupRoot 'RESTORE.txt'), "This backup excludes .env, environment-specific *.private.cfg files, txAdmin state, license keys, and passwords.`r`nStop FXServer and make a fresh backup before restoring. Review and copy config/resources, then import the SQL dump using ignored local .env credentials.`r`n", [System.Text.UTF8Encoding]::new($false))
 $manifest = foreach ($file in Get-ChildItem -LiteralPath $backupRoot -Recurse -File | Where-Object Name -ne 'MANIFEST.sha256') {
     $relative = $file.FullName.Substring($backupRoot.Length + 1).Replace('\', '/')
     '{0}  {1}' -f (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $relative
