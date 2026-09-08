@@ -1,6 +1,31 @@
 # Phase 2 Map Implementation Plan
 
-**Plan type:** actionable planning only
+**Plan type:** implementation roadmap; controlled milestone 1 source overlay implemented
+
+## Controlled milestone 1 implementation status (2026-09-08)
+
+The approved implementation request narrows the first delivery to Arlington core
+identity and civic reference points. It authorizes the script-only overlay below;
+the original broader survey/asset milestones remain the roadmap, not completed
+work. Milestone 2 has not started. See
+[implementation and deployment record](phase2-milestone1-implementation.md).
+
+| Item | Status | Actual delivery / remaining gate |
+| --- | --- | --- |
+| Dedicated world resource and central registry | IMPLEMENTED | tarrant_world; five enabled locations; fictional/real text config |
+| APD / Mission Row | IMPLEMENTED | Blip, label, entrance reference; no job/interior changes |
+| Arlington Memorial / Pillbox | IMPLEMENTED | Blip, label, entrance reference; fictional hospital name by default |
+| City Hall / Legion Square civic area | PARTIAL | Blip, label and provisional plaza point; building/door survey pending |
+| Fire Station 1 / Davis | IMPLEMENTED | Blip, label and station reference; no fire framework |
+| Stadium / Maze Bank Arena | IMPLEMENTED | Fictional stadium/district labels, blip and event reference |
+| Coordinate register and map survey | PARTIAL | Five candidate coordinates documented; envelopes and visual survey pending |
+| Texas plate audit and preparation | IMPLEMENTED | Persistence/style audit and future implementation contract |
+| Texas plate texture | DEFERRED | Enhanced dictionary/format/rendering validation required |
+| Original physical signage / Enhanced asset spike | DEFERRED | No streamed assets in controlled delivery |
+| Automated validation | PARTIAL | New Lua and six existing regression scripts pass; live-dependent health-log test fails with FXServer/txAdmin offline |
+| Visual, performance, two-client and rollback acceptance | DEFERRED | MANUAL GAME TEST REQUIRED; no visual PASS claimed |
+
+IMPLEMENTED denotes source behavior, not in-game acceptance or deployment.
 
 **Runtime target:** FiveM for GTA V Enhanced, Linux b139
 **Authority boundary:** do not acquire assets, edit live runtime/config, or enable resources until the applicable approval gate is signed off.
