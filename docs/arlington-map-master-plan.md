@@ -14,9 +14,30 @@ The practical Phase 2 boundary is signage, map labels, routing, reusable street 
 
 This document proposes placements; it does not authorize asset acquisition. Final coordinates require an in-game block survey and collision/ownership check.
 
+## Texas Commercial Staples
+
+**2026-09-09: SCAFFOLDED / DISABLED**, subsequent to milestone 1; neither restaurant is a completed milestone 1 location. No broader milestone 2 work is authorized by this addition.
+
+| Concept | Recommended district | Provisional GTA analogue / search reference (X, Y, Z) | Future RP purpose |
+| --- | --- | --- | --- |
+| Whataburger | South Arlington / Arlington Highlands analogue | Davis/Strawberry retail spine south toward LSIA; **-170.0, -1710.0, 29.0** | Restaurant jobs, drive-through, civilian meetups, traffic stops, robberies/security calls, late-night activity |
+| Dairy Queen | South Arlington / Parks Mall commercial corridor analogue | Strawberry commercial approach from the civic core; **100.0, -1400.0, 29.0** | Restaurant jobs, family/social RP, drive-through, civilian hangout, minor incidents/security calls |
+
+**PROVISIONAL - MANUAL SURVEY REQUIRED** for both coordinates. These are planning search references, not visually validated buildings, ground heights, entrances or interaction points. The existing topology places both retail analogues on the Strawberry/Davis-to-LSIA spine; the proposed references are about 411 m apart horizontally, serving separate parts of that corridor rather than adjacent parcels. Survey arterial access, suburban-style commercial frontage, parking, drive-through queues, pedestrian routes, collision, emergency access and conflicts with existing businesses/maps. Reject or move a reference if its block cannot support that brief; no suitable restaurant shell is asserted here.
+
+Both entries use the existing `tarrant_world` registry: `category = 'commercial'`, `subcategory = 'restaurant'`, `identity_group = 'texas_staples'`. `zone` stores district, `stage` implementation status, `display_name` the fictional fallback, and `survey_status` the survey gate. `asset_requirement` and `notes` record future asset needs and limitations. No duplicate fictional-name or coordinate/interaction system is introduced. More businesses can reuse this metadata and the same client loop; categories do not trigger jobs or assets.
+
+Each new entry and its blip is disabled. Each explicitly sets `branding_mode = 'fictional'`, overriding even a global real-name setting. Internal placeholder names are Texas Burger Grill and Prairie Ice Cream and Grill; final names need Randy's approval. Explicit per-location `real` mode selects text only. This configuration does not grant rights to official logos, trademarks, building models, signs, menus, trade dress or branded textures. Record approval and appropriate rights before any real-brand representation; no official visual material is copied here.
+
+Asset requirement: none for this dormant scaffold. A future exterior-first delivery may use approved original or appropriately licensed signs/props; any counter/kitchen/social shell or MLO must follow an approved room brief, asset provenance and Enhanced compatibility review. No interior, menu, economy, inventory or restaurant-job systems are included. RP purposes above are future ideas only.
+
+Future order: after core civic/identity acceptance and a separately approved commercial scope, survey both areas, approve names/sites and asset requirements, pilot the Whataburger-style Highlands anchor, then the Dairy Queen-style Parks corridor anchor. Reorder only with an approved site/business rationale. Validate each separately before activation, including blips/labels, traffic, collision, performance and Phase 1 regression checks.
+
+The Texas identity roadmap now includes APD, the Texas Health hospital analogue, City Hall, Fire Station 1, the stadium district, Texas-style plates, Whataburger, Dairy Queen, Texas road/signage identity and future Texas restaurant/business staples. The five existing identity points remain unchanged; plate artwork and physical signs remain future work.
+
 ## 2. Repository and runtime audit
 
-The tracked repository contains one project resource, `resources/[tarrant]/tarrant_ops`, which is server-side Lua with no streamed files. There are **no tracked `.ymap`, `.ytyp`, `.ydr`, `.ytd`, `.yft`, `.ybn`, `.ycd`, MLO, map manifest, or replacement-map files**. The tracked `config/server.example.cfg` starts standard GTA map/session resources and the minimum Qbox/OX stack, then `tarrant_ops`. Downloaded Qbox resources and the active server data are deliberately ignored under `runtime/`; binaries are ignored under `server-binaries/`.
+At the original 2026-09-03 planning audit, the tracked repository contained one project resource, `resources/[tarrant]/tarrant_ops`, which is server-side Lua with no streamed files. There are **no tracked `.ymap`, `.ytyp`, `.ydr`, `.ytd`, `.yft`, `.ybn`, `.ycd`, MLO, map manifest, or replacement-map files**. The tracked `config/server.example.cfg` starts standard GTA map/session resources and the minimum Qbox/OX stack, then `tarrant_ops`. Downloaded Qbox resources and the active server data are deliberately ignored under `runtime/`; binaries are ignored under `server-binaries/`.
 
 Consequences:
 
@@ -25,11 +46,13 @@ Consequences:
 - Before implementation, inventory the **deployed** ignored runtime for map resources as a separate preflight; the tracked repository alone cannot prove that staging has no manually installed asset.
 - Keep each district or large interior independently startable/rollbackable. A small shared resource may own approved signs, map labels, and common props.
 
-Suggested future structure (not created in this planning phase):
+The later milestone 1 added `tarrant_world` as the sole shared location/label registry. Reuse it for all future location metadata; the earlier proposed `tarrant_map_shared` below may hold physical assets only and must not become a competing registry.
+
+Suggested future asset structure (not created in this planning phase):
 
 ```text
 resources/[tarrant]/
-  tarrant_map_shared/          # labels, common signs/props, shared archetypes
+  tarrant_map_shared/          # future physical signs/props and shared archetypes only
   tarrant_civic/               # civic exterior placements
   tarrant_civic_interiors/     # separately testable MLOs
   tarrant_entertainment/

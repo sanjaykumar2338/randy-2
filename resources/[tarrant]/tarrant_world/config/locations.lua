@@ -2,6 +2,8 @@ TarrantWorld = {
     branding_mode = 'fictional', -- Change to 'real' only after Randy approves names.
     draw_distance = 20.0,
     label_distance = 3.0,
+    -- display_name is the fictional fallback; optional per-site branding_mode overrides global.
+    -- category is broad; optional subcategory/identity_group classify future businesses.
     locations = {
         {
             id = 'arlington_pd', enabled = true,
@@ -59,6 +61,34 @@ TarrantWorld = {
             rp_purpose = 'Stadium district event arrival and outdoor gathering point.',
             interior_requirement = 'Exterior only; no arena interior loaded.',
             stage = 'identity_only', survey_status = 'manual_required'
+        },
+        {
+            id = 'whataburger', enabled = false, branding_mode = 'fictional',
+            display_name = 'Texas Burger Grill', real_name = 'Whataburger',
+            zone = 'Arlington South Corridor', category = 'commercial',
+            subcategory = 'restaurant', identity_group = 'texas_staples',
+            gta_base = 'Davis / Strawberry retail spine, south toward LSIA (Highlands analogue search area)',
+            coords = { x = -170.0, y = -1710.0, z = 29.0 },
+            blip = { enabled = false, sprite = 1, colour = 0, scale = 0.7 },
+            rp_purpose = 'Future only: restaurant jobs, drive-through RP, civilian meetups, traffic stops, robberies/security calls and late-night activity.',
+            interior_requirement = 'Exterior-first candidate; service counter/kitchen only under a future approved room brief.',
+            asset_requirement = 'None installed; future original or licensed signage and any shell/MLO require provenance and Enhanced validation.',
+            stage = 'scaffolded_disabled', survey_status = 'manual_required',
+            notes = 'PROVISIONAL - MANUAL SURVEY REQUIRED. Search-area reference only, not a selected restaurant parcel or interaction point. Fictional name is an internal placeholder; no official artwork or trade dress approved.'
+        },
+        {
+            id = 'dairy_queen', enabled = false, branding_mode = 'fictional',
+            display_name = 'Prairie Ice Cream and Grill', real_name = 'Dairy Queen',
+            zone = 'Arlington South Corridor', category = 'commercial',
+            subcategory = 'restaurant', identity_group = 'texas_staples',
+            gta_base = 'Strawberry commercial approach from civic core (Parks Mall corridor analogue search area)',
+            coords = { x = 100.0, y = -1400.0, z = 29.0 },
+            blip = { enabled = false, sprite = 1, colour = 0, scale = 0.7 },
+            rp_purpose = 'Future only: restaurant jobs, family/social RP, drive-through, civilian hangout and minor incidents/security calls.',
+            interior_requirement = 'Exterior-first candidate; compact counter/social shell only under a future approved room brief.',
+            asset_requirement = 'None installed; future original or licensed signage and any shell/MLO require provenance and Enhanced validation.',
+            stage = 'scaffolded_disabled', survey_status = 'manual_required',
+            notes = 'PROVISIONAL - MANUAL SURVEY REQUIRED. Search-area reference only, not a selected restaurant parcel or interaction point. Fictional name is an internal placeholder; no official artwork or trade dress approved.'
         }
     }
 }

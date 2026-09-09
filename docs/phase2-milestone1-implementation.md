@@ -173,3 +173,24 @@ gameplay, stadium models, plate artwork and other 15 locations are deferred.
 Randy must approve real branding/art rights, the surveyed City Hall building and
 site tour, future room/job briefs, any asset budget/license and client performance
 targets before those additions. No paid or third-party map asset was installed.
+
+## Subsequent commercial planning scaffold (2026-09-09)
+
+Whataburger and Dairy Queen are **SCAFFOLDED / DISABLED** in the same registry,
+with disabled blips and explicit per-site fictional branding. They are not part
+of the five completed milestone 1 source locations; those five records are
+unchanged. The client now accepts an optional per-site naming override, falling
+back to the existing global mode for all original records. No assets or gameplay
+were added, and milestone 2 has not begun. See the
+[commercial plan and activation gates](phase2-map-implementation-plan.md#texas-commercial-staples).
+
+Follow-up validation: Lua 5.4 (temporary Lupa 2.8) PASS for seven unique IDs and
+coordinates, categories, required metadata, disabled sites producing no blips,
+markers or labels, per-site/global branding, proximity and cleanup. A recursive
+comparison against `73f26572de0d85661f6ab13a9b6b62fb94cd1baa` confirmed every field
+of the original five records unchanged. All three Bash regression scripts and
+PowerShell artifact/listing/dependency tests PASS; the Windows symlink assertion
+was skipped. The unchanged health-log test still fails `fields-first-success`,
+matching the previously recorded live-environment limitation; live Phase 1
+acceptance is not claimed. `git diff --check` PASS. No VPS deployment or
+txAdmin/FiveM restart was performed.

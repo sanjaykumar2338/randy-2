@@ -2,7 +2,8 @@ local config = TarrantWorld
 local blips, locations = {}, {}
 
 local function nameFor(location)
-    return config.branding_mode == 'real' and location.real_name or location.display_name
+    local mode = location.branding_mode or config.branding_mode
+    return mode == 'real' and location.real_name or location.display_name
 end
 
 for _, location in ipairs(config.locations) do

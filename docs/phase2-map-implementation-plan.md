@@ -2,6 +2,30 @@
 
 **Plan type:** implementation roadmap; controlled milestone 1 source overlay implemented
 
+## Texas Commercial Staples
+
+**2026-09-09: SCAFFOLDED / DISABLED**, a planning/config follow-up to milestone 1, not completed restaurant implementation or a start of milestone 2.
+
+| Concept | Recommended district | Provisional GTA analogue / coordinates | Status |
+| --- | --- | --- | --- |
+| Whataburger | South Arlington / Highlands retail anchor | Davis/Strawberry spine toward LSIA: -170.0, -1710.0, 29.0 | Registry and blip disabled |
+| Dairy Queen | South Arlington / Parks Mall commercial corridor | Strawberry approach from civic core: 100.0, -1400.0, 29.0 | Registry and blip disabled |
+
+**PROVISIONAL - MANUAL SURVEY REQUIRED**: search-area references only; no building, ground height, interior or interaction point has been visually validated. Separate corridor catchments avoid immediately neighboring restaurants. See [master plan commercial staples](arlington-map-master-plan.md#texas-commercial-staples) for placement rationale and future RP purposes.
+
+Reuse `tarrant_world`: commercial category, restaurant subcategory and texas_staples identity group. Existing display_name/real_name, zone, coords, blip, rp_purpose, interior_requirement, stage and survey_status fields retain their roles. Add asset_requirement/notes metadata and an optional per-location branding_mode override; no second location system or asset loader. Both new sites explicitly use fictional mode regardless of the global setting. Existing five entries inherit global naming as before.
+
+Branding gate: Randy approves final fictional names or the real-name route and appropriate rights before real-brand representation. Real text selection supplies no permission for logos, trademark visuals, buildings, signage, menus, trade dress or textures. Placeholder names are internal only. Asset gate: exterior-first original/licensed signs if approved later; any functional counter/kitchen/social shell or MLO requires a room brief, provenance, budget and Enhanced validation. No assets or gameplay systems are supplied by this scaffold.
+
+Future implementation order, under separate commercial authorization after core acceptance:
+
+1. Survey both references in-game: select parcels and exact coordinates; record screenshots, collisions, existing maps/businesses, road/parking/drive-through and emergency access.
+2. Approve names/rights, business owner, minimum exterior/interior scope, assets and performance budget.
+3. Pilot Whataburger-style Highlands anchor, then Dairy Queen-style Parks corridor anchor; use the same registry for later Texas businesses.
+4. Validate each in development (fictional/real text, blip choice, labels, two-client behavior, traffic, performance, Phase 1 regression and rollback); obtain Randy's acceptance before enabling the site and, separately, its placeholder blip.
+
+Texas identity coverage: APD, Texas Health hospital analogue, City Hall, Fire Station 1, stadium district, Texas-style plates, Whataburger, Dairy Queen, Texas roads/signage and future Texas staples. Commercial work remains deferred alongside Highlands anchor storefronts; it does not expand public-safety milestone 2.
+
 ## Controlled milestone 1 implementation status (2026-09-08)
 
 The approved implementation request narrows the first delivery to Arlington core
