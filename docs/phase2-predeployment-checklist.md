@@ -1,5 +1,129 @@
 # Phase 2 final local predeployment record
 
+## Ground lookup fallback after live retest
+
+**LIVE ACCEPTANCE PARTIAL.** Reported live evidence for 261c1ec: City Hall's
+horizontal ring sits at the feet/surface and its label remains visible: **PASS**.
+APD and Hospital were reachable but ring and label were not visible in the
+inspected views: **RETEST REQUIRED**, not placement PASS. Remaining four sites,
+full lifecycle, duplicate blips, performance and two clients remain pending.
+
+### Diagnosis and source correction
+
+The exact code defect is `z = marker.groundZ` followed by `if z then DrawMarker`:
+an unavailable or rejected ground result suppresses the ring. The query is
+`GetGroundZFor_3dCoord(c.x, c.y, c.z + 0.5, false)`; false excludes water.
+The boolean must indicate success and the returned numeric surface must be
+within 2 metres of logical Z. NaN/infinite/distant values are rejected. A
+single sample is taken at that height; this is not a vertical raycast sweep.
+Ground resolution needs locally rendered world geometry. Covered/raised areas
+and collision loading after teleport are possible causes, not verified diagnoses.
+City Hall's observed ring is consistent with an accepted surface result.
+No live native-return trace establishes which failure occurred at APD/Hospital.
+The first failed query is not cached permanently: timestamp-based retries run
+every 1000 ms while within the 20 m logical-coordinate drawing sphere. There
+is no busy retry loop or forced collision streaming.
+
+Smallest fix: `z = marker.groundZ or c.z`. Success keeps exactly the previous
+surface + 0.05 m clearance. Failure/rejected surface draws the same type-23 ring
+at logical Z + `marker.zOffset` (default +0.05 m), retrying on the existing
+schedule. Later success replaces fallback; later failure uses fallback again.
+No large downward correction is guessed. The fallback guarantees the draw call,
+not visibility through geometry or ground-level acceptance: it may temporarily
+float or be occluded and must be checked in-game. Existing global/per-site
+`zOffset` config applies to both paths. No location/config change is needed.
+
+Labels were already independent: after marker processing, the nearest enabled
+location strictly within 3 m (3D logical-coordinate distance) is selected, and
+its label draws regardless of ground success or marker enabled state. Blips
+are created at startup independently. Missing APD/Hospital labels therefore
+cannot be explained solely by a nil ground result. Actual player XYZ after
+teleport/settling, running resource version/state, client errors and label
+occlusion/other UI must be inspected; no cause is asserted without evidence.
+No label-distance or blip behavior changed.
+
+Runtime cost is unchanged apart from drawing the ring during failed lookups:
+one distance scan of seven entries per tick, 750 ms sleep far away, per-frame
+draws only near a visible marker/label. At most one ground query per nearby
+site per second at steady state, also refreshed if game timer wraps backwards.
+Cache is bounded to enabled IDs (seven), with no growing retry queue. No new
+thread, network call, blocking loop, collision request or inactivity handler.
+The existing yielding render loop is necessary for frame-local draws; no
+unbounded ground-resolution loop is added. Enhanced runtime cost is unmeasured.
+
+Tests: Lua 5.4 syntax/manifest/world harness PASS, including failure/rejected
+results producing fallback, throttling, later successful retry, labels and one
+blip during all states, APD/Hospital/City Hall cases, and unchanged success type,
+scale and clearance. All seven logical coordinates/blip configs are pinned by
+existing tests; the entire config file is unchanged from 261c1ec. Existing six
+Phase 1 regression scripts PASS; Linux symlink assertion skipped on Windows.
+No Phase 1 source changed. Live gameplay/performance acceptance is not claimed.
+
+### Operator update (not executed)
+
+Confirm txAdmin uses `/opt/randy-2/runtime/qbox-server-data`. VPS Bash as owner:
+
+```bash
+set -euo pipefail
+cd /opt/randy-2
+git status --short
+test -z "$(git status --porcelain)"
+test "$(git branch --show-current)" = main
+git pull --ff-only origin main
+git log -1 --format='%H %s'
+WORLD='/opt/randy-2/runtime/qbox-server-data/resources/[tarrant]/tarrant_world'
+BACKUP=/opt/randy-2/runtime/world-fallback-backup-$(date -u +%Y%m%dT%H%M%SZ)
+test -f "$WORLD/client/main.lua"
+test ! -L "$WORLD"
+test ! -L "$WORLD/client"
+test ! -e "$BACKUP"
+mkdir -m 700 "$BACKUP"
+cp -p "$WORLD/client/main.lua" "$BACKUP/main.lua"
+cmp 'resources/[tarrant]/tarrant_world/config/locations.lua' "$WORLD/config/locations.lua"
+test ! -e "$WORLD/client/main.lua.fallback-update"
+cp 'resources/[tarrant]/tarrant_world/client/main.lua' "$WORLD/client/main.lua.fallback-update"
+mv "$WORLD/client/main.lua.fallback-update" "$WORLD/client/main.lua"
+cmp 'resources/[tarrant]/tarrant_world/client/main.lua' "$WORLD/client/main.lua"
+printf 'Rollback client backup: %s/main.lua\n' "$BACKUP"
+```
+
+The config comparison deliberately stops if the deployed config differs; review
+operator customization before updating. Only the client file changes. In txAdmin
+**server console**, once copied:
+
+```text
+restart tarrant_world
+```
+
+No full restart, server.cfg change or refresh required. For rollback, restore
+`$BACKUP/main.lua` to `$WORLD/client/main.lua` and restart only tarrant_world.
+Do not modify vendor resources, private settings, DB or artifacts.
+
+### Exact retest order
+
+1. APD `434.7,-981.9,30.7`: existing txAdmin coordinate teleport; inspect immediate
+   ring, then again after 1-3 seconds. Step aside to see the ring. Record actual
+   player XYZ if the label is missing; verify within 3 m of logical coordinates.
+2. Hospital `298.6,-584.4,43.3`: repeat, including arrival under the canopy and
+   leaving/returning after collision loads. A fallback ring is not ground PASS.
+3. City Hall `195,-933,30.7`: preserve the observed ground ring and label PASS;
+   verify unchanged scale, surface clearance and blip. This is the regression gate.
+4. Fire `200.1,-1634.3,29.8`, Stadium `-250.5,-2030,30.1`, Texas Burger Grill
+   `-170,-1710,29`, Prairie Ice Cream and Grill `100,-1400,29`: inspect accessible
+   location, immediate/later ring, label, waypoint, collision and suitability.
+   Restaurant PASS means provisional commercial parcel suitability only.
+5. Verify all seven blips exist once; character/movement/HUD/inventory/chat and
+   existing money/bank are healthy. Record F8/server errors separately, including
+   any missing-label evidence. Do not change money/inventory or vendor resources.
+6. After all seven visits, console `stop tarrant_world`, confirm overlay gone;
+   `ensure tarrant_world`, confirm one overlay returns. Repeat with two clients,
+   reconnect and performance/resmon observations. Record results before acceptance.
+
+**APD/Hospital placement and complete visual acceptance remain unapproved.**
+No deployment, unrelated warning fix, Phase 1 change or Milestone 2 work.
+Earlier hide-on-failure descriptions below are historical and superseded here.
+
+
 ## Marker correction update after partial live test
 
 **LIVE ACCEPTANCE PARTIAL.** This section supersedes the earlier all-pending

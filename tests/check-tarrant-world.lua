@@ -159,31 +159,33 @@ run('fictional', false, 'real') -- Explicit site naming override, development on
 -- Presentation overrides and ground-query failure/retry are independent of labels/blips.
 local site = config.locations[2]
 for _,l in ipairs(config.locations) do l.enabled = l == site end
-local function presentation(override, found, surface)
+local function presentation(override, found, surface, laterSurface)
     site.marker = override
     validMarker(override)
-    local thread, draws, queries, frames, now = nil, {}, 0, 0, 0
+    local thread, draws, queries, frames, now, blips = nil, {}, 0, 0, 0, 0
     CreateThread = function(fn) thread = coroutine.create(fn) end
     GetEntityCoords = function() return site.coords end
     GetGameTimer = function() return now end
     GetGroundZFor_3dCoord = function(x,y,z,water)
         queries = queries + 1
         assert(x == site.coords.x and y == site.coords.y and z == site.coords.z + 0.5 and not water)
+        if laterSurface and queries >= 2 then return true, laterSurface end
         return found, surface
     end
     DrawMarker = function(...) draws[#draws+1] = {...} end
     EndTextCommandDisplayText = function() frames = frames + 1 end
     AddBlipForCoord = function(x,y,z)
         assert(x == site.coords.x and y == site.coords.y and z == site.coords.z)
-        return 1
+        blips = blips + 1
+        return blips
     end
     dofile(root .. scripts[2])
     for _,time in ipairs({0, 16, 1000}) do
         now = time
         local ok,delay = coroutine.resume(thread)
-        assert(ok and delay == 0) -- Nearby label still draws when marker is omitted.
+        assert(ok and delay == 0) -- Label draws independently of ground success.
     end
-    assert(frames == 3)
+    assert(frames == 3 and blips == 1)
     return draws,queries
 end
 local draws,queries = presentation({enabled=false}, true, site.coords.z-1)
@@ -194,13 +196,33 @@ assert(draws[1][1] == 1 and draws[1][4] == site.coords.z+0.1)
 assert(draws[1][11] == 0.4 and draws[1][12] == 0.6 and draws[1][13] == 0.2)
 for _,surface in ipairs({site.coords.z-10, math.huge, 0/0}) do
     draws,queries = presentation({}, true, surface)
-    assert(#draws == 0 and queries == 2)
+    assert(#draws == 3 and queries == 2)
+    assert(draws[1][4] == site.coords.z + config.marker.zOffset)
 end
 draws,queries = presentation({}, false, 0)
-assert(#draws == 0 and queries == 2)
+assert(#draws == 3 and queries == 2)
+assert(draws[1][4] == site.coords.z + config.marker.zOffset)
 draws,queries = presentation({}, true, site.coords.z-1)
 assert(#draws == 3 and queries == 2)
 site.marker = nil
+-- APD/Hospital: initial failure remains visible and later success replaces fallback.
+for _,index in ipairs({1,2,3}) do
+    site = config.locations[index]
+    for _,l in ipairs(config.locations) do l.enabled = l == site end
+    draws,queries = presentation({}, false, 0, site.coords.z-1)
+    assert(#draws == 3 and queries == 2)
+    assert(draws[1][4] == site.coords.z + config.marker.zOffset)
+    assert(draws[2][4] == draws[1][4]) -- No per-frame lookup.
+    assert(draws[3][4] == site.coords.z-1 + config.marker.zOffset)
+    -- City Hall known-good success retains type, scale, alignment and label behavior.
+    draws,queries = presentation({}, true, site.coords.z-1)
+    assert(#draws == 3 and queries == 2)
+    for _,draw in ipairs(draws) do
+        assert(draw[1] == 23 and draw[4] == site.coords.z-1 + 0.05)
+        assert(draw[11] == 0.5 and draw[12] == 0.5 and draw[13] == 0.1)
+    end
+    site.marker = nil
+end
 -- An entirely disabled registry does not retain an idle proximity loop.
 for _, site in ipairs(config.locations) do site.enabled = false end
 CreateThread = function(fn)

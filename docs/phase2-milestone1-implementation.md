@@ -1,5 +1,21 @@
 # Phase 2 milestone 1: Arlington core identity
 
+## Latest live retest: ground lookup fallback
+
+**LIVE ACCEPTANCE PARTIAL:** City Hall ground ring/label PASS on deployed
+261c1ec. APD/Hospital ring and label visibility require retest; no placement PASS.
+The nil-ground hide branch now falls back to logical Z + configured zOffset,
+keeping type 23, scale 0.5/0.5/0.1 and all seven location records unchanged.
+Success still uses detected ground + 0.05 m; the existing one-second query
+schedule retries without blocking. Labels were already independent of ground
+lookup, so their absence remains unexplained by this branch. Site-specific
+native failure/rejection and collision loading are unproven without live traces.
+
+See [full diagnosis, tests, exact update commands and ordered retest](phase2-predeployment-checklist.md#ground-lookup-fallback-after-live-retest).
+This supersedes earlier hide-on-failure behavior below. No full visual acceptance,
+VPS deployment, vendor fix, Phase 1 edit or Milestone 2 work is claimed.
+
+
 ## Marker correction after LIVE ACCEPTANCE PARTIAL (2026-09-10)
 
 The deployed c06c59b overlay loaded with custom blips/labels visible. APD's

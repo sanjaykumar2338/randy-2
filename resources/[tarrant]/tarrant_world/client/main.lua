@@ -51,9 +51,10 @@ CreateThread(function()
                             marker.groundZ = found and type(ground) == 'number'
                                 and math.abs(ground - c.z) <= 2.0 and ground or nil
                         end
-                        z = marker.groundZ
+                        z = marker.groundZ or c.z
                     end
-                    -- Unknown/distant surface: keep label/blip, omit a potentially floating marker.
+                    -- Until a valid surface is available, draw at logical Z + configured offset.
+                    -- The next throttled query can replace this temporary visual fallback.
                     if z then
                         sleep = 0
                         local scale = style.scale
