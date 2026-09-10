@@ -1,5 +1,5 @@
 local config = TarrantWorld
-local blips, locations = {}, {}
+local blips, locations, markers = {}, {}, {}
 
 local function nameFor(location)
     local mode = location.branding_mode or config.branding_mode
@@ -9,6 +9,10 @@ end
 for _, location in ipairs(config.locations) do
     if location.enabled then
         locations[#locations + 1] = location
+        local style = {}
+        for key, value in pairs(config.marker) do style[key] = value end
+        for key, value in pairs(location.marker or {}) do style[key] = value end
+        markers[location.id] = { style = style }
         if location.blip.enabled then
             local c, style = location.coords, location.blip
             local blip = AddBlipForCoord(c.x, c.y, c.z)
@@ -34,16 +38,37 @@ CreateThread(function()
             local c = location.coords
             local distance = (pos.x - c.x)^2 + (pos.y - c.y)^2 + (pos.z - c.z)^2
             if distance < config.draw_distance * config.draw_distance then
-                sleep = 0
-                DrawMarker(2, c.x, c.y, c.z + 0.2, 0.0, 0.0, 0.0,
-                    0.0, 0.0, 0.0, 0.25, 0.25, 0.25, 80, 170, 230, 150,
-                    false, false, 2, false, nil, nil, false)
+                local marker = markers[location.id]
+                local style = marker.style
+                if style.enabled then
+                    local z = c.z
+                    if style.ground then
+                        local now = GetGameTimer()
+                        -- Bounded local query, once per second; never force collision streaming.
+                        if not marker.checkedAt or now - marker.checkedAt >= 1000 or now < marker.checkedAt then
+                            marker.checkedAt = now
+                            local found, ground = GetGroundZFor_3dCoord(c.x, c.y, c.z + 0.5, false)
+                            marker.groundZ = found and type(ground) == 'number'
+                                and math.abs(ground - c.z) <= 2.0 and ground or nil
+                        end
+                        z = marker.groundZ
+                    end
+                    -- Unknown/distant surface: keep label/blip, omit a potentially floating marker.
+                    if z then
+                        sleep = 0
+                        local scale = style.scale
+                        DrawMarker(style.type, c.x, c.y, z + style.zOffset, 0.0, 0.0, 0.0,
+                            0.0, 0.0, 0.0, scale.x, scale.y, scale.z, 80, 170, 230, 150,
+                            false, false, 2, false, nil, nil, false)
+                    end
+                end
                 if distance < nearestDistance then
                     nearest, nearestDistance = location, distance
                 end
             end
         end
         if nearest then
+            sleep = 0
             -- Frame-local label disappears automatically on stop or leaving the point.
             SetTextFont(0)
             SetTextScale(0.0, 0.32)

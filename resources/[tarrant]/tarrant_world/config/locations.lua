@@ -1,5 +1,9 @@
 TarrantWorld = {
     branding_mode = 'fictional', -- Change to 'real' only after Randy approves names.
+    -- Per-location marker fields override these defaults; scale overrides as a whole.
+    -- ground=false uses logical Z + zOffset for a manually surveyed surface.
+    marker = { enabled = true, type = 23, scale = { x = 0.5, y = 0.5, z = 0.1 },
+        zOffset = 0.05, ground = true },
     draw_distance = 20.0,
     label_distance = 3.0,
     -- display_name is the fictional fallback; optional per-site branding_mode overrides global.

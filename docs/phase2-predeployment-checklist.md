@@ -1,5 +1,96 @@
 # Phase 2 final local predeployment record
 
+## Marker correction update after partial live test
+
+**LIVE ACCEPTANCE PARTIAL.** This section supersedes the earlier all-pending
+record below. PASS: resource loads, custom blips/labels visible, sensible APD
+and Hospital areas, accessible City Hall plaza. FIX REQUIRED from the deployed
+c06c59b test: shared vertical marker placement. Source correction is implemented;
+visual fix acceptance is still pending. No individual logical coordinates or
+blip positions changed. City Hall's actual building remains unvalidated.
+
+NOT YET TESTED: Fire Station, Stadium, Texas Burger Grill, Prairie Ice Cream and
+Grill, full lifecycle, duplicate blip behavior, performance and two clients.
+Inventory NUI error is unrelated to world code; exact vendor cause unproven.
+Timeout causality is unproven. See the [diagnosis and automated evidence](phase2-milestone1-implementation.md#marker-correction-after-live-acceptance-partial-2026-09-10).
+
+### Operator update only (not executed here)
+
+Confirm the same active server-data path in txAdmin. Use VPS Bash as repo owner:
+
+```bash
+set -euo pipefail
+cd /opt/randy-2
+git status --short
+test -z "$(git status --porcelain)"
+test "$(git branch --show-current)" = main
+git pull --ff-only origin main
+git log -1 --format='%H %s'
+DATA=/opt/randy-2/runtime/qbox-server-data
+BACKUP=/opt/randy-2/runtime/world-marker-backup-$(date -u +%Y%m%dT%H%M%SZ)
+test -f "$DATA/resources/[tarrant]/tarrant_world/fxmanifest.lua"
+test ! -L "$DATA/resources/[tarrant]/tarrant_world"
+test ! -e "$BACKUP"
+mkdir -m 700 "$BACKUP"
+cp -a "$DATA/resources/[tarrant]/tarrant_world" "$BACKUP/tarrant_world"
+printf 'Keep rollback backup: %s\n' "$BACKUP"
+```
+
+Then txAdmin **server console**:
+
+```text
+stop tarrant_world
+```
+
+Back in the same VPS Bash session, copy only the two changed executable files:
+
+```bash
+cp 'resources/[tarrant]/tarrant_world/config/locations.lua' "$DATA/resources/[tarrant]/tarrant_world/config/locations.lua"
+cp 'resources/[tarrant]/tarrant_world/client/main.lua' "$DATA/resources/[tarrant]/tarrant_world/client/main.lua"
+cmp 'resources/[tarrant]/tarrant_world/config/locations.lua' "$DATA/resources/[tarrant]/tarrant_world/config/locations.lua"
+cmp 'resources/[tarrant]/tarrant_world/client/main.lua' "$DATA/resources/[tarrant]/tarrant_world/client/main.lua"
+```
+
+Then server console:
+
+```text
+ensure tarrant_world
+```
+
+Only tarrant_world needs stop/start. No full server restart, refresh, server.cfg,
+world.cfg, private config, DB or artifact changes are required. Review any local
+world customizations against the backup before copying. On copy failure leave
+world stopped and restore the two files from the printed backup before ensuring.
+For rollback, stop world, copy `$BACKUP/tarrant_world/config/locations.lua` and
+`$BACKUP/tarrant_world/client/main.lua` to their respective runtime paths, then
+ensure world. Keep all Phase 1 resources running.
+
+### Exact live retest
+
+1. Confirm player connected and existing `tx` admin menu works. Record deployed
+   commit, client/server build and console baseline. Do not alter permissions.
+2. Teleport via txAdmin Teleport: Coords to APD `434.7,-981.9,30.7`, Hospital
+   `298.6,-584.4,43.3`, City Hall `195,-933,30.7`. Walk a few steps away from each
+   ring to inspect it unobstructed. Verify a small flat ring on/just above the
+   actual surface, no floating/underground marker, readable label and unchanged
+   blip/waypoint. Record screenshot and any failed surface lookup; do not guess Z.
+3. Visit Fire `200.1,-1634.3,29.8`, Stadium `-250.5,-2030,30.1`, Texas Burger Grill
+   `-170,-1710,29`, Prairie Ice Cream and Grill `100,-1400,29`. Check accessible
+   terrain, appropriate GTA area, label/ring, unique blip, road/parking and
+   collision suitability. Restaurant PASS means provisional parcel suitability.
+4. Check late streaming/rapid arrival and revisit each site: ring should appear
+   after a successful ground query, without a permanent false position. Check
+   day/night, slopes/steps and performance/resmon; report native errors separately.
+5. Check character, movement/camera/HUD, inventory opening, chat and existing
+   money/bank values without changing items or money. Capture inventory errors
+   and any disconnect timing; do not attribute them to world without evidence.
+6. After all seven visits, console `stop tarrant_world`: rings/labels/blips vanish.
+   `ensure tarrant_world`: each returns once. Check server/F8 errors and count
+   blips; do not restart the server. Repeat with two clients.
+7. Leave visual acceptance pending until observed results are recorded. No
+   fixes, permission changes or vendor changes during retest without approval.
+
+
 2026-09-10. Source ready for development testing; **LIVE ENVIRONMENT VALIDATION
 REQUIRED**. Sanjay owns deployment and visual acceptance. No VPS connection,
 live restart, artifact change, vendor edit or Milestone 2 implementation occurred.

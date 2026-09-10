@@ -1,5 +1,71 @@
 # Phase 2 milestone 1: Arlington core identity
 
+## Marker correction after LIVE ACCEPTANCE PARTIAL (2026-09-10)
+
+The deployed c06c59b overlay loaded with custom blips/labels visible. APD's
+police doorway and the Hospital arrival area were sensible, and City Hall's
+plaza accessible. These three failed the ground-level marker criterion; Fire,
+Stadium, both restaurants, full lifecycle, duplicate blips, performance and two
+clients remain untested. City Hall building selection remains pending.
+
+The shared call was type 2 (ThickChevronUp), Z = logical Z + 0.2, scale
+0.25/0.25/0.25, with zero rotation and no bobbing. It used the logical coordinate
+as the visual anchor without ground resolution. The small scale does not explain
+a torso-height displacement. A marker pivot is not a ped's foot position;
+Cfx does not document a universal half-height/center correction for all marker
+meshes, so no such correction or fixed -1 metre offset is asserted as verified.
+
+The reusable correction defaults to type 23 (HorizontalCircleFat), scale
+0.5/0.5/0.1, and zOffset 0.05 metres above a successfully queried ground surface.
+The offset is surface clearance, not an estimate of distance from logical Z to
+feet. Query at logical Z + 0.5 only within the existing draw radius; accept only
+finite results within 2 metres of logical Z. Cache for one second (including
+failed lookups); no collision requests, busy wait or extra thread. If unresolved,
+hide the marker and retain label/blip. This avoids drawing a guessed elevation;
+interiors, slopes and multiple floors still need manual confirmation.
+
+Global `marker` defaults and optional per-location `marker` overrides support
+`enabled`, `type`, `scale`, `zOffset`, and `ground`. Fields inherit independently;
+`scale` replaces the complete x/y/z table. Explicit `enabled=false` hides only
+the marker. For a surveyed surface, `ground=false` uses logical Z + zOffset.
+No shipped site overrides are needed. Logical coordinates, all blip settings,
+label proximity and all seven location records remain unchanged.
+
+Sources: [Cfx marker types](https://docs.fivem.net/docs/game-references/markers/),
+[DrawMarker declaration](https://github.com/citizenfx/natives/blob/master/GRAPHICS/DrawMarker.md),
+[ground native](https://github.com/citizenfx/natives/blob/master/MISC/GetGroundZFor_3dCoord.md),
+reviewed 2026-09-10. The ground native requires locally rendered terrain.
+**SOURCE FIX COMPLETE / ENHANCED VISUAL RETEST REQUIRED**, not visual acceptance.
+No streamed assets, vendor edits, VPS deployment or Milestone 2 work.
+
+Inventory warning assessment: **unrelated to tarrant_world's code path**. This
+resource has no NUI page/files, SendNUIMessage, inventory export/event, dependency,
+UI focus or URL handling. Local ox_inventory 2.47.9 owns `web/build/index.html`
+and an inventory:imagepath configuration; the reported relative `web/build/none`
+request belongs to its NUI. The exact initiating asset/URL is unproven without
+live NUI request evidence. Do not infer inventory functionality PASS or edit OX.
+
+Timeout assessment: **UNPROVEN; no causal evidence against tarrant_world**.
+The pre-fix loop scans seven locations and always Waits (750 ms distant, frame
+wait near a draw); the correction also yields. No network events, blocking I/O,
+timeout/inactivity handler, server thread or timeout-setting change exists here.
+Known live evidence is the client timeout message and txAdmin's inconsistent
+online-player display, not a correlated timeout diagnosis. No full live profiler
+or drop trace was available. Local tracked config has no identified relevant
+world-linked timeout handling. Do not alter timeouts based on this evidence.
+
+Validation rerun: Lua 5.4 (Lupa 2.8) PASS for marker defaults/overrides, numeric
+finite offsets/scales, active registry, original seven coordinates/blips, ground
+query cadence/failure/distant/nonfinite results, disabled markers, labels,
+branding and lifecycle. Three Bash and three PowerShell Phase 1 regressions PASS;
+Windows skips the Linux symlink assertion. Health-log regression still fails
+fields-first-success: **LIVE ENVIRONMENT VALIDATION REQUIRED**. Diff checks PASS.
+See the [marker-update commands and retest](phase2-predeployment-checklist.md#marker-correction-update-after-partial-live-test).
+
+The earlier implementation/deployment record below is historical where it
+conflicts with this marker correction and the partial live acceptance above.
+
+
 > **Final predeployment update, 2026-09-10:** all seven registry entries and
 > blips are enabled for Sanjay's development test. Whataburger / Dairy Queen
 > remain **PROVISIONAL - MANUAL GAME SURVEY REQUIRED**, using Texas Burger Grill

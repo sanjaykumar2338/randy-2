@@ -17,12 +17,34 @@ assert(config.draw_distance > config.label_distance and config.label_distance > 
 assert(#config.locations == 7)
 local ids, coordinates = {}, {}
 local categories = {police=true, hospital=true, civic=true, fire=true, stadium=true, commercial=true}
+local function validMarker(override)
+    local m = {}
+    for k,v in pairs(config.marker) do m[k] = v end
+    for k,v in pairs(override or {}) do m[k] = v end
+    assert(type(m.enabled) == 'boolean' and type(m.ground) == 'boolean')
+    assert(type(m.type) == 'number' and m.type % 1 == 0 and m.type >= 0 and m.type <= 43)
+    assert(type(m.zOffset) == 'number' and m.zOffset == m.zOffset and math.abs(m.zOffset) < 10)
+    for _,axis in ipairs({'x','y','z'}) do
+        assert(type(m.scale[axis]) == 'number' and m.scale[axis] > 0 and m.scale[axis] <= 5)
+    end
+end
+validMarker()
+-- Accepted c06c59b logical coordinates and blips: presentation changes must not move them.
+local baseline = {
+    {434.7,-981.9,30.7,60,3,0.8}, {298.6,-584.4,43.3,61,2,0.8},
+    {195,-933,30.7,419,5,0.8}, {200.1,-1634.3,29.8,436,1,0.8},
+    {-250.5,-2030,30.1,541,38,0.9}, {-170,-1710,29,1,0,0.7}, {100,-1400,29,1,0,0.7}
+}
 local active = 0
 for index, l in ipairs(config.locations) do
     for _, key in ipairs({'id', 'display_name', 'real_name', 'zone', 'category',
         'gta_base', 'rp_purpose', 'interior_requirement', 'stage', 'survey_status'}) do
         assert(type(l[key]) == 'string' and #l[key] > 0, key)
     end
+    validMarker(l.marker)
+    local b = baseline[index]
+    assert(l.coords.x == b[1] and l.coords.y == b[2] and l.coords.z == b[3])
+    assert(l.blip.enabled and l.blip.sprite == b[4] and l.blip.colour == b[5] and l.blip.scale == b[6])
     assert(not ids[l.id], 'duplicate ID')
     ids[l.id] = true
     assert(categories[l.category], 'invalid category')
@@ -83,7 +105,16 @@ local function run(mode, disableFirst, restaurantMode, shipped, hideBlip)
     RemoveBlip = function(id) assert(not removed[id]); removed[id] = true end
     PlayerPedId = function() return 1 end
     GetEntityCoords = function() return position end
-    DrawMarker = function() markers = markers + 1 end
+    GetGameTimer = function() return 1000 end
+    GetGroundZFor_3dCoord = function(x,y,z,water)
+        assert(not water)
+        return true, z - 1.5 -- Simulated surface one metre below logical Z.
+    end
+    DrawMarker = function(kind,x,y,z,dx,dy,dz,rx,ry,rz,sx,sy,sz)
+        assert(kind == 23 and sx == 0.5 and sy == 0.5 and sz == 0.1)
+        assert(math.abs(z - (position.z - 1 + 0.05)) < 0.00001)
+        markers = markers + 1
+    end
     EndTextCommandDisplayText = function() textFrames = textFrames + 1 end
     Wait = coroutine.yield
     dofile(root .. scripts[2])
@@ -125,6 +156,51 @@ run('real', false)
 run('fictional', true)
 run('real', false, 'fictional') -- Per-site fictional mode survives global real mode.
 run('fictional', false, 'real') -- Explicit site naming override, development only.
+-- Presentation overrides and ground-query failure/retry are independent of labels/blips.
+local site = config.locations[2]
+for _,l in ipairs(config.locations) do l.enabled = l == site end
+local function presentation(override, found, surface)
+    site.marker = override
+    validMarker(override)
+    local thread, draws, queries, frames, now = nil, {}, 0, 0, 0
+    CreateThread = function(fn) thread = coroutine.create(fn) end
+    GetEntityCoords = function() return site.coords end
+    GetGameTimer = function() return now end
+    GetGroundZFor_3dCoord = function(x,y,z,water)
+        queries = queries + 1
+        assert(x == site.coords.x and y == site.coords.y and z == site.coords.z + 0.5 and not water)
+        return found, surface
+    end
+    DrawMarker = function(...) draws[#draws+1] = {...} end
+    EndTextCommandDisplayText = function() frames = frames + 1 end
+    AddBlipForCoord = function(x,y,z)
+        assert(x == site.coords.x and y == site.coords.y and z == site.coords.z)
+        return 1
+    end
+    dofile(root .. scripts[2])
+    for _,time in ipairs({0, 16, 1000}) do
+        now = time
+        local ok,delay = coroutine.resume(thread)
+        assert(ok and delay == 0) -- Nearby label still draws when marker is omitted.
+    end
+    assert(frames == 3)
+    return draws,queries
+end
+local draws,queries = presentation({enabled=false}, true, site.coords.z-1)
+assert(#draws == 0 and queries == 0)
+draws,queries = presentation({type=1,scale={x=0.4,y=0.6,z=0.2},zOffset=0.1,ground=false}, false, 0)
+assert(#draws == 3 and queries == 0)
+assert(draws[1][1] == 1 and draws[1][4] == site.coords.z+0.1)
+assert(draws[1][11] == 0.4 and draws[1][12] == 0.6 and draws[1][13] == 0.2)
+for _,surface in ipairs({site.coords.z-10, math.huge, 0/0}) do
+    draws,queries = presentation({}, true, surface)
+    assert(#draws == 0 and queries == 2)
+end
+draws,queries = presentation({}, false, 0)
+assert(#draws == 0 and queries == 2)
+draws,queries = presentation({}, true, site.coords.z-1)
+assert(#draws == 3 and queries == 2)
+site.marker = nil
 -- An entirely disabled registry does not retain an idle proximity loop.
 for _, site in ipairs(config.locations) do site.enabled = false end
 CreateThread = function(fn)
