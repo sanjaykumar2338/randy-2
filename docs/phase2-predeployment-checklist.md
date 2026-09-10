@@ -1,5 +1,89 @@
 # Phase 2 final local predeployment record
 
+## Latest acceptance: five core sites passed; restaurant parcel survey
+
+User-reported live results on deployed **5ff2f916b6a87bc16adb2bc6bbfb7d9691c53538**:
+APD, Hospital, City Hall, Fire Station 1 and Stadium **PASS** for readable labels,
+visible horizontal rings, correct surface placement and accessibility. These
+are known-good reference points. This does not establish functional City Hall
+interiors, full lifecycle, duplicate-blip, performance or two-client acceptance.
+
+Texas Burger Grill at **-170,-1710,29**: **RELOCATION / SURVEY REQUIRED**.
+The reported concrete/graffiti/service space lacks useful apparent restaurant
+frontage. Reject this specific reference for acceptance, not the whole district.
+The missing marker/label was unconfirmed in the captured view and is not evidence
+of a new shared-renderer defect. No code or coordinate change is justified yet.
+Prairie Ice Cream and Grill at **100,-1400,29**: **NEEDS LIVE SURVEY**. Keep the
+configured reference pending inspection; its Strawberry commercial-corridor
+planning rationale remains plausible, but frontage, parking and precise parcel
+suitability are not verified. Do not relocate Prairie on the Burger result alone.
+
+### Ranked Texas Burger Grill shortlist (survey references only)
+
+These are published third-party location leads, not verified vanilla Enhanced
+spawn points or approved replacements. Source precision does not prove safe
+foot placement. Inspect the exterior via existing authorized admin controls;
+if a point lies inside a closed shell, approach from the street and record a
+safe exterior point. No MLO download/install is required or authorized.
+
+1. **12.04, -1605.57, 29.37 ? Taco Bomb pickup reference, south commercial
+   corridor / Strawberry-Davis vicinity.** [Agency Scripts' published pickup
+   config](https://docs.agencyg.de/pad/config) identifies these XYZ as Taco Bomb.
+   This is the first survey because an existing food-service reference is a
+   better starting point than the failed service-space reference and it remains
+   near the planned southern corridor (about 210 m from the rejected point).
+   Inspect the street-facing food frontage and its actual nearest road; the
+   source does not certify a vanilla entrance, parking bays or drive-through.
+   Curb pickup/nearby parking are survey possibilities, not established features.
+   Future exterior/counter adaptation may be possible; a full drive-through or
+   replacement MLO needs parcel dimensions, door/collision and map-conflict
+   review. Risk: the author's server may use a custom map or different shop
+   naming; reject if the deployed vanilla exterior is unsuitable.
+2. **-184.84, -1425.82, 31.47 ? Strawberry Mini Cluckin Bell, behind Benny's.**
+   [The map author's location post](https://forum.cfx.re/t/mlo-free-mini-cluckin-bell/4816116)
+   supplies these XYZ and identifies a small fast-food site in Strawberry.
+   It offers a food-service footprint to inspect, approximately 285 m north of
+   the rejected reference. Survey public-road entry and the customer-facing
+   kiosk frontage separately from Benny's service access. Its compact footprint
+   may suit takeaway use, but parking/queue length and street visibility need
+   inspection; being behind a workshop makes it the lower-ranked alternative.
+   A published interior demonstrates prior adaptation interest, not compatible
+   geometry on this server. The 2022 asset is unverified for Enhanced and its
+   author notes window-collision limitations. Do not install it. Reject the
+   parcel if access reproduces the alley/service-space problem or cannot support
+   the intended Highlands restaurant scale.
+
+Ranking is a survey priority based on corridor fit and published food-service
+references, not a claim that either is clearly superior in-game. Both need
+frontage photos, approach/exit route, pedestrian access, parking/queue space,
+ground XYZ, building bounds and existing resource/business conflicts recorded.
+No drive-through or future MLO compatibility is certified. Sources reviewed
+2026-09-10; used only as location evidence, not asset recommendations.
+
+### Next live-test order
+
+1. Texas Burger candidate 1: **12.04,-1605.57,29.37**. Survey the exterior and
+   nearby road/parking; capture frontage and approach screenshots.
+2. Texas Burger candidate 2: **-184.84,-1425.82,31.47**. Compare visibility,
+   public access, footprint and vehicle queue potential against candidate 1.
+3. Prairie existing reference: **100,-1400,29**. Check the current ring/label,
+   street-facing parcel, pedestrian access and parking. Classify KEEP/MOVE only
+   after the survey; distinguish its catchment from the preferred Burger site.
+4. Choose a Burger parcel with Sanjay/Randy and record surveyed exterior XYZ.
+   Submit a separate coordinate-only change for review. Candidate points have
+   no tarrant_world marker/blip: none should be expected there before that change.
+5. After an approved future coordinate change, retest both restaurants, then
+   APD -> Hospital -> City Hall -> Fire -> Stadium as unchanged controls. Finish
+   resource stop/ensure, duplicate-blip, Phase 1 and two-client/performance checks.
+
+No code/config/assets changed in this survey task. Marker type 23, scale,
+ground resolution, fallback, retry, labels and all seven records remain intact.
+Lua 5.4 world tests and manifest syntax PASS; source/config preservation and
+`git diff --check` PASS. Full Milestone 1 acceptance remains incomplete.
+No VPS update commands apply. No deployment, vendor change or Milestone 2 work.
+Earlier acceptance statements below are historical and superseded by this entry.
+
+
 ## Ground lookup fallback after live retest
 
 **LIVE ACCEPTANCE PARTIAL.** Reported live evidence for 261c1ec: City Hall's

@@ -1,5 +1,15 @@
 # Phase 2 Map Implementation Plan
 
+> **Latest user-reported live acceptance on 5ff2f916b6a87bc16adb2bc6bbfb7d9691c53538:**
+> APD, Hospital, City Hall, Fire Station 1 and Stadium PASS for label/ring,
+> ground placement and accessibility. Texas Burger Grill requires relocation
+> survey; Prairie Ice Cream and Grill NEEDS LIVE SURVEY and stays unchanged.
+> All coordinates, blips and the working renderer are untouched. Full Milestone 1
+> acceptance is incomplete. See the [ranked restaurant survey shortlist and
+> next test order](phase2-predeployment-checklist.md#latest-acceptance-five-core-sites-passed-restaurant-parcel-survey).
+> Earlier statuses below are historical where superseded by this update.
+
+
 > **Final predeployment update, 2026-09-10:** all seven registry entries and
 > blips are enabled for Sanjay's development test. Whataburger / Dairy Queen
 > remain **PROVISIONAL - MANUAL GAME SURVEY REQUIRED**, using Texas Burger Grill
