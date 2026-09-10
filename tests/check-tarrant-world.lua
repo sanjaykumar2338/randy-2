@@ -32,14 +32,14 @@ for index, l in ipairs(config.locations) do
     if index <= 5 then
         assert(l.enabled == true and l.stage == 'identity_only' and l.branding_mode == nil)
     else
-        assert(l.enabled == false and l.stage == 'scaffolded_disabled')
+        assert(l.enabled == true and l.stage == 'provisional_dev_test')
         assert(l.branding_mode == 'fictional' and l.display_name ~= l.real_name)
         assert(l.category == 'commercial' and l.subcategory == 'restaurant' and l.identity_group == 'texas_staples')
-        assert(l.survey_status == 'manual_required' and not l.blip.enabled)
+        assert(l.survey_status == 'manual_required' and l.blip.enabled)
         for _, key in ipairs({'asset_requirement', 'notes'}) do
             assert(type(l[key]) == 'string' and #l[key] > 0, key)
         end
-        assert(l.notes:find('PROVISIONAL - MANUAL SURVEY REQUIRED', 1, true))
+        assert(l.notes:find('PROVISIONAL - MANUAL GAME SURVEY REQUIRED', 1, true))
     end
     for _, key in ipairs({'x', 'y', 'z'}) do
         local value = l.coords[key]
@@ -53,17 +53,18 @@ for index, l in ipairs(config.locations) do
     assert(l.blip.colour >= 0 and l.blip.colour % 1 == 0)
     assert(l.blip.scale > 0 and l.blip.scale <= 2)
 end
-assert(active == 5 and ids.whataburger and ids.dairy_queen)
+assert(active == 7 and ids.whataburger and ids.dairy_queen)
 for _, id in ipairs({'arlington_pd', 'arlington_memorial', 'arlington_city_hall',
     'arlington_fire_1', 'arlington_stadium'}) do assert(ids[id]) end
 
 -- Exercise lifecycle/branding/proximity against isolated native stubs.
-local function run(mode, disableFirst, restaurantMode)
+local function run(mode, disableFirst, restaurantMode, shipped, hideBlip)
     config.branding_mode = mode
     config.locations[1].enabled = not disableFirst
     local restaurant = config.locations[6]
-    restaurant.enabled = restaurantMode ~= nil
-    restaurant.blip.enabled = restaurantMode ~= nil
+    restaurant.enabled = shipped or restaurantMode ~= nil
+    config.locations[7].enabled = shipped or false
+    restaurant.blip.enabled = restaurant.enabled and not hideBlip
     restaurant.branding_mode = restaurantMode or 'fictional'
     local created, removed, labels, handlers = {}, {}, {}, {}
     local thread, markers, textFrames = nil, 0, 0
@@ -87,9 +88,9 @@ local function run(mode, disableFirst, restaurantMode)
     Wait = coroutine.yield
     dofile(root .. scripts[2])
     local coreCount = disableFirst and 4 or 5
-    assert(#created == coreCount + (restaurantMode and 1 or 0))
+    assert(#created == coreCount + ((restaurant.enabled and not hideBlip) and 1 or 0) + (shipped and 1 or 0))
     assert(labels[coreCount] == (mode == 'real' and 'AT&T Stadium' or 'Arlington Stadium'))
-    if restaurantMode then
+    if restaurantMode and not shipped and not hideBlip then
         assert(labels[#created] == (restaurantMode == 'real' and restaurant.real_name or restaurant.display_name))
     end
     local ok, delay = coroutine.resume(thread)
@@ -101,23 +102,36 @@ local function run(mode, disableFirst, restaurantMode)
         position = config.locations[i].coords
         local beforeMarkers, beforeFrames = markers, textFrames
         ok, delay = coroutine.resume(thread)
-        local visible = i == 6 and restaurantMode ~= nil
+        local visible = config.locations[i].enabled
         assert(ok and delay == (visible and 0 or 750))
         assert(markers == beforeMarkers + (visible and 1 or 0))
         assert(textFrames == beforeFrames + (visible and 1 or 0))
         if visible then
-            local expectedName = restaurantMode == 'real' and restaurant.real_name or restaurant.display_name
-            assert(labels[#labels - 1] == expectedName .. '~n~' .. restaurant.zone)
+            local site = config.locations[i]
+            local expectedName = site.branding_mode == 'real' and site.real_name or site.display_name
+            assert(labels[#labels - 1] == expectedName .. '~n~' .. site.zone)
         end
     end
     handlers.onClientResourceStop('another_resource')
     assert(next(removed) == nil)
     handlers.onClientResourceStop('tarrant_world')
+    handlers.onClientResourceStop('tarrant_world') -- Cleanup is idempotent.
     for i = 1, #created do assert(removed[i]) end
 end
+run('fictional', false, nil, true) -- Shipped seven-site configuration.
+run('fictional', false, 'fictional', false, true) -- Marker independent of blip.
 run('fictional', false)
 run('real', false)
 run('fictional', true)
 run('real', false, 'fictional') -- Per-site fictional mode survives global real mode.
 run('fictional', false, 'real') -- Explicit site naming override, development only.
+-- An entirely disabled registry does not retain an idle proximity loop.
+for _, site in ipairs(config.locations) do site.enabled = false end
+CreateThread = function(fn)
+    local thread = coroutine.create(fn)
+    assert(coroutine.resume(thread))
+    assert(coroutine.status(thread) == 'dead')
+end
+AddBlipForCoord = function() error('disabled registry created a blip') end
+dofile(root .. scripts[2])
 print('tarrant_world: manifest, syntax, registry, branding, disable, proximity and cleanup PASS')

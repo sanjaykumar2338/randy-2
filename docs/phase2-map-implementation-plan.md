@@ -1,5 +1,16 @@
 # Phase 2 Map Implementation Plan
 
+> **Final predeployment update, 2026-09-10:** all seven registry entries and
+> blips are enabled for Sanjay's development test. Whataburger / Dairy Queen
+> remain **PROVISIONAL - MANUAL GAME SURVEY REQUIRED**, using Texas Burger Grill
+> / Prairie Ice Cream and Grill text. Five core records are unchanged. Plates
+> remain blocked pending verified Enhanced texture targets/assets; zero streamed
+> assets added. Historical disabled-state and first-install instructions below
+> are superseded by the [final checklist and deployment/rollback runbook](phase2-predeployment-checklist.md).
+> No visual acceptance, VPS deployment or Milestone 2 work is claimed.
+
+
+
 **Plan type:** implementation roadmap; controlled milestone 1 source overlay implemented
 
 ## Texas Commercial Staples

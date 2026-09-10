@@ -26,7 +26,7 @@ end
 
 -- One proximity loop; no entities, server events, database access or shared UI ownership.
 CreateThread(function()
-    while true do
+    while #locations > 0 do
         local sleep = 750
         local pos = GetEntityCoords(PlayerPedId())
         local nearest, nearestDistance = nil, config.label_distance * config.label_distance
@@ -62,4 +62,5 @@ end)
 AddEventHandler('onClientResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     for _, blip in ipairs(blips) do RemoveBlip(blip) end
+    blips = {}
 end)

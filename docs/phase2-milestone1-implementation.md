@@ -1,5 +1,15 @@
 # Phase 2 milestone 1: Arlington core identity
 
+> **Final predeployment update, 2026-09-10:** all seven registry entries and
+> blips are enabled for Sanjay's development test. Whataburger / Dairy Queen
+> remain **PROVISIONAL - MANUAL GAME SURVEY REQUIRED**, using Texas Burger Grill
+> / Prairie Ice Cream and Grill text. Five core records are unchanged. Plates
+> remain blocked pending verified Enhanced texture targets/assets; zero streamed
+> assets added. Historical disabled-state and first-install instructions below
+> are superseded by the [final checklist and deployment/rollback runbook](phase2-predeployment-checklist.md).
+> No visual acceptance, VPS deployment or Milestone 2 work is claimed.
+
+
 Source implementation complete; visual acceptance pending. This controlled scope
 was authorized by the milestone request and narrows the earlier planning gates
 to scripts/configuration with fictional branding. Milestone 2 has not begun.
