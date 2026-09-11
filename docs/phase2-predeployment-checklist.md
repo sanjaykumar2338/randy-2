@@ -1,5 +1,33 @@
 # Phase 2 final local predeployment record
 
+## Selected provisional Whataburger parcel: Burger Shot / Vespucci
+
+The user selected Burger Shot / Vespucci following live survey for the
+**Whataburger analogue / Texas Burger Grill**, at
+**-1174.1512, -881.3021, 14.0166**. This supersedes the former Burger point
+`12.04, -1605.57, 29.37`; that former point passed live ring, name/district label,
+ground placement and accessibility checks, but is no longer the selected parcel.
+The new parcel selection does not establish post-relocation overlay acceptance.
+
+Keep fictional `Texas Burger Grill` labeling, development/provisional status and
+manual survey gate until the new ring/label/access checks pass. The existing
+`Arlington South Corridor` RP district label is retained; the GTA base is now
+Vespucci, an explicit departure from the original south-corridor search preference.
+No real-brand artwork, streamed assets, MLOs or gameplay changes are included.
+
+Prairie remains unchanged and unapproved at `100, -1400, 29`. Its earlier Lucky
+Plucker and Mini Cluckin Bell candidates were rejected in live survey for
+industrial surroundings and cramped auto/commercial surroundings respectively.
+Vespucci is now assigned provisionally to Burger, not Prairie.
+All five accepted civic/stadium records and the renderer remain untouched.
+Validation: Lua 5.4 world tests and six Phase 1 regression scripts PASS.
+Linux symlink assertion skipped on Windows; health-log regression retains its
+previously documented `fields-first-success` failure. Config comparison confirms
+only Burger XYZ, GTA base and notes changed. `git diff --check` PASS.
+Full Milestone 1 acceptance remains incomplete; no deployment occurred.
+Earlier coordinate and candidate recommendations below are historical where
+superseded by this decision.
+
 ## Approved Burger coordinate update (2026-09-11)
 
 Texas Burger Grill's rejected `-170,-1710,29` reference is replaced by the

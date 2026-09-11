@@ -71,14 +71,14 @@ TarrantWorld = {
             display_name = 'Texas Burger Grill', real_name = 'Whataburger',
             zone = 'Arlington South Corridor', category = 'commercial',
             subcategory = 'restaurant', identity_group = 'texas_staples',
-            gta_base = 'Davis / Strawberry retail spine, south toward LSIA (Highlands analogue search area)',
-            coords = { x = 12.04, y = -1605.57, z = 29.37 },
+            gta_base = 'Burger Shot / Vespucci (selected provisional Whataburger parcel)',
+            coords = { x = -1174.1512, y = -881.3021, z = 14.0166 },
             blip = { enabled = true, sprite = 1, colour = 0, scale = 0.7 },
             rp_purpose = 'PROVISIONAL - MANUAL GAME SURVEY REQUIRED. Restaurant search reference only.',
             interior_requirement = 'Exterior-first candidate; service counter/kitchen only under a future approved room brief.',
             asset_requirement = 'None installed; future original or licensed signage and any shell/MLO require provenance and Enhanced validation.',
             stage = 'provisional_dev_test', survey_status = 'manual_required',
-            notes = 'PROVISIONAL - MANUAL GAME SURVEY REQUIRED. Search-area reference only, not a selected restaurant parcel or interaction point. Fictional name is an internal placeholder; no official artwork or trade dress approved.'
+            notes = 'PROVISIONAL - MANUAL GAME SURVEY REQUIRED. Burger Shot / Vespucci selected by user after live survey; provisional exterior reference, post-relocation overlay acceptance pending. Fictional name is an internal placeholder; no official artwork or trade dress approved.'
         },
         {
             id = 'dairy_queen', enabled = true, branding_mode = 'fictional',

@@ -3,11 +3,11 @@
 > **Latest user-reported live acceptance on 5ff2f916b6a87bc16adb2bc6bbfb7d9691c53538:**
 > APD, Hospital, City Hall, Fire Station 1 and Stadium PASS for label/ring,
 > ground placement and accessibility. Burger now uses approved survey XYZ
-> **12.04, -1605.57, 29.37**; post-update visual acceptance remains pending.
+> **-1174.1512, -881.3021, 14.0166** (Burger Shot / Vespucci); post-update visual acceptance remains pending.
 > Prairie remains unapproved at **100, -1400, 29**, pending candidate survey.
 > Five core records, Prairie, all presentation settings and renderer are unchanged. Full Milestone 1
 > acceptance is incomplete. See the [ranked restaurant survey shortlist and
-> next test order](phase2-predeployment-checklist.md#approved-burger-coordinate-update-2026-09-11).
+> next test order](phase2-predeployment-checklist.md#selected-provisional-whataburger-parcel-burger-shot--vespucci).
 > Earlier statuses below are historical where superseded by this update.
 
 
