@@ -29,11 +29,12 @@ local function validMarker(override)
     end
 end
 validMarker()
--- Accepted c06c59b logical coordinates and blips: presentation changes must not move them.
+-- Five live-accepted core sites and unchanged Prairie; Burger replacement approved 2026-09-11.
+-- Presentation changes must preserve these logical coordinates and blips.
 local baseline = {
     {434.7,-981.9,30.7,60,3,0.8}, {298.6,-584.4,43.3,61,2,0.8},
     {195,-933,30.7,419,5,0.8}, {200.1,-1634.3,29.8,436,1,0.8},
-    {-250.5,-2030,30.1,541,38,0.9}, {-170,-1710,29,1,0,0.7}, {100,-1400,29,1,0,0.7}
+    {-250.5,-2030,30.1,541,38,0.9}, {12.04,-1605.57,29.37,1,0,0.7}, {100,-1400,29,1,0,0.7}
 }
 local active = 0
 for index, l in ipairs(config.locations) do

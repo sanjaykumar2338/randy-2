@@ -72,7 +72,7 @@ TarrantWorld = {
             zone = 'Arlington South Corridor', category = 'commercial',
             subcategory = 'restaurant', identity_group = 'texas_staples',
             gta_base = 'Davis / Strawberry retail spine, south toward LSIA (Highlands analogue search area)',
-            coords = { x = -170.0, y = -1710.0, z = 29.0 },
+            coords = { x = 12.04, y = -1605.57, z = 29.37 },
             blip = { enabled = true, sprite = 1, colour = 0, scale = 0.7 },
             rp_purpose = 'PROVISIONAL - MANUAL GAME SURVEY REQUIRED. Restaurant search reference only.',
             interior_requirement = 'Exterior-first candidate; service counter/kitchen only under a future approved room brief.',

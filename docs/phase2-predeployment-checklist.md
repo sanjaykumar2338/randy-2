@@ -1,5 +1,55 @@
 # Phase 2 final local predeployment record
 
+## Approved Burger coordinate update (2026-09-11)
+
+Texas Burger Grill's rejected `-170,-1710,29` reference is replaced by the
+user-approved survey coordinate **12.04, -1605.57, 29.37**. Only its logical XYZ
+changes in the config. Its fictional label, blip, marker and all other metadata
+are preserved. The retained provisional/manual-required metadata now means
+post-update visual acceptance remains pending; it does not revoke site approval.
+APD, Hospital, City Hall, Fire Station and Stadium retain their reported live
+PASS and their entire records are unchanged. Prairie's entire record remains
+unchanged at **100, -1400, 29**, which is not approved. Full Milestone 1 acceptance
+is incomplete. No deployment or Milestone 2 work occurred.
+
+Validation: Lua 5.4 world harness PASS (registry, unique coordinates/blips,
+branding, markers, labels, lifecycle and fallback/retry). Exact comparison to the
+parent config proves only Burger XYZ changed. Six Phase 1 regression scripts
+PASS; Linux symlink assertion skipped on Windows. Health-log regression FAILS
+`fields-first-success`, matching the previously documented local limitation.
+No live Phase 1 acceptance is claimed.
+
+### Ranked Prairie candidates: NEEDS LIVE SURVEY
+
+These published XYZ are survey leads, not certified safe teleport/entrance points.
+Ranking and concept suitability are planning inferences. Approach from the road
+if a coordinate falls inside a closed shell. No custom assets were installed.
+
+| Rank | XYZ / landmark | Rationale and limitations |
+| --- | --- | --- |
+| 1 | **457.65, -1684.77, 29.28** - Lucky Plucker, Strawberry Avenue / Davis | Best southern fast-food parcel lead: existing restaurant frontage on the intended retail road corridor, distinct from Burger. Inspect its vehicle apron/parking and queue route for an ice-cream-and-grill use. A published kitchen/interior adaptation provides evidence of future MLO potential, not Enhanced compatibility. Confirm vanilla frontage, public entry, parking capacity and collision before approval. |
+| 2 | **-184.84, -1425.82, 31.47** - Mini Cluckin Bell, Strawberry, behind Benny's | Compact food-service footprint could suit a takeaway ice-cream counter and small grill. Weaker Parks Mall-style fit: workshop adjacency may limit road visibility, customer parking and direct public access. Survey street-to-counter access and reject if it repeats the service-alley problem. Existing small-interior work suggests adaptation potential but reports missing window collision; no asset compatibility is assumed. |
+
+Location evidence: [Lucky Plucker map author's coordinates and interior description](https://forum.cfx.re/t/paid-mlo-lucky-plucker-strawberry-avenue/5201456)
+and [Mini Cluckin Bell map author's coordinates and limitations](https://forum.cfx.re/t/mlo-free-mini-cluckin-bell/4816116),
+reviewed 2026-09-11. These are location references, not asset purchase recommendations.
+Neither parking, drive-through feasibility nor a safe exterior Z has been locally
+verified. Record frontage, public road/parking access, pedestrian surface XYZ,
+parcel bounds and map/business conflicts before selecting Prairie's replacement.
+
+Next operator test order: Burger at the approved XYZ (one blip, label within 3 m,
+ring at ground level), Prairie candidates 1 then 2, then APD -> Hospital -> City
+Hall -> Fire -> Stadium as unchanged controls. Follow with restart/duplicate-blip,
+two-client/performance and live Phase 1 checks. Candidate points have no Prairie
+overlay; its overlay remains at the unchanged unapproved coordinate.
+
+The earlier survey and deployment sections below are historical. In particular,
+the old Burger coordinates and renderer-copy commands do not apply to this update.
+Deploy only `tarrant_world/config/locations.lua` from this coordinate-update commit;
+back up the active config, confirm it matches the commit's parent, and restart only
+`tarrant_world` in the txAdmin server console. Do not deploy the renderer or use a
+full resource sync for this update.
+
 ## Latest acceptance: five core sites passed; restaurant parcel survey
 
 User-reported live results on deployed **5ff2f916b6a87bc16adb2bc6bbfb7d9691c53538**:
