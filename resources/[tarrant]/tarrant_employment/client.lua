@@ -51,7 +51,17 @@ CreateThread(function()
     while true do
         local coords = GetEntityCoords(PlayerPedId())
         local atCenter = #(coords - cfg.center) < 2.5
-        local atStop = active and #(coords - cfg.jobs[active].stops[stop]) < 2.5
+        local taskCoords = active and cfg.jobs[active].stops[stop]
+        local taskDistance = taskCoords and #(coords - taskCoords)
+        local nearTask = taskDistance and taskDistance < 35.0
+        if nearTask then
+            -- Stops are player-foot coordinates; lower the cylinder so it sits on the ground.
+            DrawMarker(1, taskCoords.x, taskCoords.y, taskCoords.z - 0.9,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                1.2, 1.2, 0.6, 168, 80, 220, 145,
+                false, true, 2, false, nil, nil, false)
+        end
+        local atStop = taskDistance and taskDistance < 2.5
         local label = not working and (atCenter and '[E] Employment Center' or atStop and ('[E] ' .. cfg.jobs[active].action))
         if label ~= shown then
             if label then lib.showTextUI(label) elseif shown then lib.hideTextUI() end
@@ -78,10 +88,13 @@ CreateThread(function()
                 working = false
             end
         end
-        Wait(label and 0 or 500)
+        Wait((label or nearTask) and 0 or 500)
     end
 end)
 RegisterNetEvent('QBCore:Client:OnPlayerUnload', clearRoute)
+RegisterNetEvent('QBCore:Client:SetDuty', function(onDuty)
+    if not onDuty then clearRoute() end
+end)
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     clearRoute()
