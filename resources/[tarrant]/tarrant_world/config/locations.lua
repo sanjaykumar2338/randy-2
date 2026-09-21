@@ -74,11 +74,11 @@ TarrantWorld = {
             gta_base = 'Burger Shot / Vespucci (selected provisional Whataburger parcel)',
             coords = { x = -1174.1512, y = -881.3021, z = 14.0166 },
             blip = { enabled = true, sprite = 1, colour = 0, scale = 0.7 },
-            rp_purpose = 'PROVISIONAL - MANUAL GAME SURVEY REQUIRED. Restaurant search reference only.',
+            rp_purpose = 'PROVISIONAL PARCEL SELECTED. Texas Burger Grill development reference only.',
             interior_requirement = 'Exterior-first candidate; service counter/kitchen only under a future approved room brief.',
             asset_requirement = 'None installed; future original or licensed signage and any shell/MLO require provenance and Enhanced validation.',
-            stage = 'provisional_dev_test', survey_status = 'manual_required',
-            notes = 'PROVISIONAL - MANUAL GAME SURVEY REQUIRED. Burger Shot / Vespucci selected by user after live survey; provisional exterior reference, post-relocation overlay acceptance pending. Fictional name is an internal placeholder; no official artwork or trade dress approved.'
+            stage = 'provisional_dev_test', survey_status = 'parcel_selected_overlay_pending',
+            notes = 'PROVISIONAL PARCEL SELECTED after live Enhanced-runtime survey: suitable standalone restaurant building, parking/frontage and road access. Post-relocation overlay acceptance pending. NOT a completed Whataburger-branded building. Texas Burger Grill remains fictional development branding; physical Burger Shot signage unchanged. No official artwork or trade dress approved.'
         },
         {
             id = 'dairy_queen', enabled = true, branding_mode = 'fictional',

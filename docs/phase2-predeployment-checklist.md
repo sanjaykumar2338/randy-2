@@ -2,7 +2,9 @@
 
 ## Selected provisional Whataburger parcel: Burger Shot / Vespucci
 
-The user selected Burger Shot / Vespucci following live survey for the
+The user accepted Burger Shot / Vespucci as the preferred provisional parcel after
+a completed live Enhanced-runtime survey: a suitable standalone restaurant
+building, parking/frontage and road access. The selection is for the
 **Whataburger analogue / Texas Burger Grill**, at
 **-1174.1512, -881.3021, 14.0166**. This supersedes the former Burger point
 `12.04, -1605.57, 29.37`; that former point passed live ring, name/district label,
@@ -10,7 +12,9 @@ ground placement and accessibility checks, but is no longer the selected parcel.
 The new parcel selection does not establish post-relocation overlay acceptance.
 
 Keep fictional `Texas Burger Grill` labeling, development/provisional status and
-manual survey gate until the new ring/label/access checks pass. The existing
+`survey_status = 'parcel_selected_overlay_pending'` until the new ring/label/access
+checks pass. This is a provisional parcel selection, **NOT a completed
+Whataburger-branded building**. Physical Burger Shot signage is unchanged. The existing
 `Arlington South Corridor` RP district label is retained; the GTA base is now
 Vespucci, an explicit departure from the original south-corridor search preference.
 No real-brand artwork, streamed assets, MLOs or gameplay changes are included.
@@ -20,13 +24,98 @@ Plucker and Mini Cluckin Bell candidates were rejected in live survey for
 industrial surroundings and cramped auto/commercial surroundings respectively.
 Vespucci is now assigned provisionally to Burger, not Prairie.
 All five accepted civic/stadium records and the renderer remain untouched.
-Validation: Lua 5.4 world tests and six Phase 1 regression scripts PASS.
+Prior coordinate-update validation: Lua 5.4 world tests and six Phase 1 regression scripts PASS.
 Linux symlink assertion skipped on Windows; health-log regression retains its
 previously documented `fields-first-success` failure. Config comparison confirms
 only Burger XYZ, GTA base and notes changed. `git diff --check` PASS.
 Full Milestone 1 acceptance remains incomplete; no deployment occurred.
 Earlier coordinate and candidate recommendations below are historical where
 superseded by this decision.
+
+## Parcel survey follow-up validation (2026-09-21)
+
+The selected XYZ was already present in commit `39c5bf4`; this follow-up records
+completed parcel selection while keeping overlay acceptance pending. Only Burger
+purpose/status/notes change in the runtime config; fictional branding, coordinates,
+all other records, renderer and assets are preserved.
+
+- `python tests/run-economy-lua.py`: world and employment Lua 5.4 suites PASS.
+- PowerShell `check-runtime-dependencies.ps1`, `check-linux-artifact-install.ps1`
+  and `check-public-listing-config.ps1`: PASS.
+- Bash `check-linux-hosted-deployment.sh`, `check-runtime-environment-isolation.sh`
+  and `check-public-listing-config.sh`: PASS; hosted deployment skips the Linux
+  symlink assertion on Windows.
+- `check-week2-health-log.ps1`: pre-existing FAIL at `fields-first-success` on
+  both the current tree and isolated committed baseline (details below).
+- Structural Lua config comparison against HEAD: only Burger `rp_purpose`,
+  `survey_status` and `notes` differ; all other values are identical.
+- `git diff --check`: PASS. The user authorized commit/push with the proven
+  unrelated health fixture failure recorded. No VPS deployment or restart performed.
+
+### Health regression diagnosis and baseline proof
+
+Baseline: `bb9d6d0a1abf1faa04c156ac309f55a5206a3db8`, exported with `git archive`
+into a temporary directory, using the same local environment settings. The original
+working tree was preserved. Temporary diagnostic files were removed afterward.
+Both health scripts match HEAD after normalizing checkout CRLF versus archive LF.
+
+`tests/check-week2-health-log.ps1:31` builds an ordered JSON fixture with `fields`
+first: `healthy=true`, `database=true`, all ten required resources `started`,
+message `Startup readiness passed`, category `health.startup`. Line 38 invokes
+`fields-first-success` with `$ShouldPass = $true`. Lines 20-21 execute
+`scripts/check-week2-health.ps1 -Environment development -HealthLogPath <fixture>`
+and set `$passed = $LASTEXITCODE -eq 0`. The failing assertion at line 26 is:
+
+```powershell
+if ($passed -ne $ShouldPass) { throw "Health-log regression fixture failed: $Name" }
+```
+
+Expected: child exit 0, `$passed = $true`. Actual on **both** trees: child exit 1,
+`$passed = $false`; the same regression assertion throws. Directly exercising
+both production scripts with equivalent fields-first fixture data shows:
+
+- MariaDB service and private port 3306 checks PASS.
+- Game TCP listener missing on port 30120.
+- txAdmin private listener check fails on port 40120.
+- FXServer `/info.json` and txAdmin HTTP endpoints cannot connect.
+- `Latest tarrant_ops structured health.startup event passed all readiness assertions.`
+- Final exception: `Week 2 health check failed with 4 issue(s).`
+
+Production trace: lines 8-16 read environment/ports; lines 21-26 extract JSON
+starting at the first `{` and use `ConvertFrom-Json`; lines 27-44 check actual
+services/listeners/HTTP endpoints. Lines 45-68 parse the fixture, select the latest
+`health.startup`, and validate message, booleans and resource states successfully.
+Line 69 throws because the earlier live-service failures remain in `$failures`.
+The fixture is coupled to full local service health; this is **not** a JSON field
+order/parser failure and is **pre-existing**, unrelated to the restaurant update.
+The suite stops at this first fixture, so later fixtures are not claimed as passed.
+
+None of the six changed files can affect this invocation: the health script reads
+`.env`, OS/service/network state and the supplied log, not world Lua configuration,
+the standalone Lua test or Phase 2 Markdown. No parser, `tarrant_ops`, employment,
+Qbox/OX, database, server/private configuration, plates or assets were modified.
+Relevant suites pass; no new regression was observed. Live overlay acceptance at
+the selected parcel remains pending and is not established by mocked Lua tests.
+
+### Minimal operator deployment
+
+After this change is pushed, VPS deployment from the existing checkout is
+config-only (verify the runtime path exists before copying; no server
+configuration or renderer copy):
+
+```bash
+cd /opt/randy-2
+git pull --ff-only origin main
+WORLD='/opt/randy-2/runtime/qbox-server-data/resources/[tarrant]/tarrant_world'
+test -f "$WORLD/config/locations.lua" && \
+  cp -a "$WORLD/config/locations.lua" "$WORLD/config/locations.lua.bak-$(date +%Y%m%d-%H%M%S)" && \
+  cp 'resources/[tarrant]/tarrant_world/config/locations.lua' "$WORLD/config/locations.lua" && \
+  cmp 'resources/[tarrant]/tarrant_world/config/locations.lua' "$WORLD/config/locations.lua"
+```
+
+After a successful copy, operator-only txAdmin server console: `restart tarrant_world`.
+Retest the selected parcel's fictional label, single blip and ground ring; this
+check does not establish a branded restaurant building or functional business.
 
 ## Approved Burger coordinate update (2026-09-11)
 

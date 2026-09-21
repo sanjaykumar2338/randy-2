@@ -1,5 +1,14 @@
 # Phase 2 milestone 1: Arlington core identity
 
+> **Current parcel decision:** the completed live Enhanced-runtime survey accepted
+> Burger Shot / Vespucci at **-1174.1512, -881.3021, 14.0166** for its standalone
+> restaurant building, parking/frontage and road access. Texas Burger Grill remains
+> fictional development branding. This is a **provisional parcel selection, NOT a
+> completed Whataburger-branded building**; physical Burger Shot signage is unchanged.
+> Registry survey status is `parcel_selected_overlay_pending`; post-update overlay
+> acceptance remains pending. Earlier Burger search-area/survey-required statuses
+> below are historical. Prairie and the five core sites are unchanged.
+
 > **Latest user-reported live acceptance on 5ff2f916b6a87bc16adb2bc6bbfb7d9691c53538:**
 > APD, Hospital, City Hall, Fire Station 1 and Stadium PASS for label/ring,
 > ground placement and accessibility. Burger now uses approved survey XYZ

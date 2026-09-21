@@ -58,11 +58,20 @@ for index, l in ipairs(config.locations) do
         assert(l.enabled == true and l.stage == 'provisional_dev_test')
         assert(l.branding_mode == 'fictional' and l.display_name ~= l.real_name)
         assert(l.category == 'commercial' and l.subcategory == 'restaurant' and l.identity_group == 'texas_staples')
-        assert(l.survey_status == 'manual_required' and l.blip.enabled)
+        assert(l.blip.enabled)
+        if l.id == 'whataburger' then
+            assert(l.survey_status == 'parcel_selected_overlay_pending')
+            assert(l.display_name == 'Texas Burger Grill' and l.real_name == 'Whataburger')
+            assert(l.gta_base == 'Burger Shot / Vespucci (selected provisional Whataburger parcel)')
+            assert(l.rp_purpose:find('PROVISIONAL PARCEL SELECTED', 1, true))
+            assert(l.notes:find('NOT a completed Whataburger-branded building', 1, true))
+        else
+            assert(l.survey_status == 'manual_required')
+            assert(l.notes:find('PROVISIONAL - MANUAL GAME SURVEY REQUIRED', 1, true))
+        end
         for _, key in ipairs({'asset_requirement', 'notes'}) do
             assert(type(l[key]) == 'string' and #l[key] > 0, key)
         end
-        assert(l.notes:find('PROVISIONAL - MANUAL GAME SURVEY REQUIRED', 1, true))
     end
     for _, key in ipairs({'x', 'y', 'z'}) do
         local value = l.coords[key]
