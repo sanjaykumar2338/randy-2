@@ -1,5 +1,11 @@
 # Civilian recovery and Employment Center delivery
 
+**Follow-up: hospital validation fix.** The first live recovery failed at surface
+validation. The validation-only follow-up leaves the hospital coordinates
+unchanged pending an operator-measured exterior point. Use the targeted deployment
+and retest instructions in [medical-surface-validation.md](medical-surface-validation.md)
+for this follow-up, not the initial-install commands below.
+
 This is a staging candidate, not a claim of live Enhanced b156 acceptance.
 No deployment, private configuration changes, database operations, artifact
 changes, upstream updates or Bug 3 changes were performed by this delivery.
@@ -29,8 +35,10 @@ changes, upstream updates or Bug 3 changes were performed by this delivery.
   a separate proposed arrival position, not a world-location edit. Static code
   cannot prove the surface clear of props/doors or appropriate to the live map.
   **Survey this candidate on b156 before launch.** Runtime waits up to 8 seconds
-  for collision and accepts ground only within 2 m of configured Z. On failure
-  the player stays dead, is unfrozen/faded in, and can retry after the lease.
+  for scene loading and accepts ground only within 2 m of configured Z, with
+  destination world-collision, slope and vehicle-occupancy checks. Validation
+  does not move the dead ped. On failure the player stays dead at their original
+  position, is unfrozen/faded in, and can retry after the lease.
 * Recovery restores maximum ped health, stamina, blood/task state and gameplay
   camera angle; releases only this resource's streaming freeze/fade. Hunger and
   thirst are raised to at least 25 on successful hospital recovery to avoid an

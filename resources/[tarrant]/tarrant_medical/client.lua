@@ -5,11 +5,18 @@ local message
 local remotePending = false
 local sawNativeDeath = false
 local loaded = LocalPlayer.state.isLoggedIn == true
+local sceneOwned, focusOwned = false, false
+
+local function releaseStreaming()
+    if sceneOwned then NewLoadSceneStop() sceneOwned = false end
+    if focusOwned then ClearFocus() focusOwned = false end
+end
 
 local function cleanup()
     generation = generation + 1
     recovering, pending, remotePending, message = false, false, false, nil
     sawNativeDeath = false
+    releaseStreaming()
     if moving then
         FreezeEntityPosition(PlayerPedId(), false)
         DoScreenFadeIn(250)
@@ -52,10 +59,12 @@ local function relocate(ticket)
     moving = true
     DoScreenFadeOut(250)
     FreezeEntityPosition(ped, true)
-    local expires = GetGameTimer() + cfg.collisionTimeoutMs
-    local found, ground
+    local started = GetGameTimer()
+    local expires = started + cfg.collisionTimeoutMs
+    local ground, ready, reason = nil, false, 'scene_busy'
     local function externalRevive()
         generation = generation + 1
+        releaseStreaming()
         FreezeEntityPosition(ped, false)
         DoScreenFadeIn(250)
         moving, pending = false, false
@@ -63,16 +72,48 @@ local function relocate(ticket)
         -- status response cannot mistake this revived ped for a fresh login.
         message = 'Revived. Confirming recovery...'
     end
-    repeat
-        if not IsEntityDead(ped) then externalRevive() return end
-        RequestCollisionAtCoord(h.x, h.y, h.z)
-        SetEntityCoordsNoOffset(ped, h.x, h.y, h.z, false, false, false)
-        found, ground = GetGroundZFor_3dCoord(h.x, h.y, h.z + 1.0, false)
-        Wait(50)
-    until stopped or ticket ~= generation or (found and HasCollisionLoadedAroundEntity(ped)) or GetGameTimer() >= expires
+    -- Stream the destination independently of the dead ped. Ground queries need
+    -- rendered terrain; collision around the original ped cannot validate it.
+    if not IsNewLoadSceneActive() then
+        SetFocusPosAndVel(h.x, h.y, h.z, 0.0, 0.0, 0.0)
+        focusOwned = true
+        sceneOwned = NewLoadSceneStartSphere(h.x, h.y, h.z, 30.0, 0)
+        reason = 'scene_start_failed'
+        if sceneOwned then
+            repeat
+                if not IsEntityDead(ped) then externalRevive() return end
+                RequestCollisionAtCoord(h.x, h.y, h.z)
+                reason = 'scene_not_loaded'
+                if IsNewLoadSceneLoaded() then
+                    local found
+                    found, ground = GetGroundZFor_3dCoord(h.x, h.y, h.z + 1.0, false)
+                    reason = 'ground_not_found'
+                    if found then
+                        reason = 'ground_z_mismatch'
+                        if math.abs(ground-h.z) <= 2.0 then
+                            -- Require actual destination world collision and a walkable
+                            -- surface; never replace the old Z bound with a fallback Z.
+                            local probe = StartExpensiveSynchronousShapeTestLosProbe(
+                                h.x, h.y, h.z + 1.0, h.x, h.y, h.z - 2.5, 1, ped, 7)
+                            local result, hit, point, normal = GetShapeTestResult(probe)
+                            reason = 'ground_collision_unavailable'
+                            if result == 2 and hit and math.abs(point.z-ground) <= 0.25 then
+                                reason = 'surface_too_steep'
+                                if normal.z >= 0.9 then
+                                    reason = 'vehicle_at_spawn'
+                                    ready = not IsAnyVehicleNearPoint(h.x, h.y, ground + 1.0, 2.0)
+                                end
+                            end
+                        end
+                    end
+                end
+                Wait(50)
+            until stopped or ticket ~= generation or ready or GetGameTimer() >= expires
+        end
+    end
     if stopped or ticket ~= generation then return end
     if not IsEntityDead(ped) then externalRevive() return end
-    if found and math.abs(ground-h.z) <= 2.0 and HasCollisionLoadedAroundEntity(ped) then
+    if ready then
         NetworkResurrectLocalPlayer(h.x, h.y, ground + 1.0, h.heading, false, false)
         ped = PlayerPedId()
         SetEntityHealth(ped, GetEntityMaxHealth(ped))
@@ -84,8 +125,11 @@ local function relocate(ticket)
         SetGameplayCamRelativePitch(0.0, 1.0)
         message = 'Recovery complete. Confirming hospital arrival...'
     else
+        print(('[tarrant_medical] Hospital validation failed: %s; target=%.4f,%.4f,%.4f; ground=%s; elapsed=%dms')
+            :format(reason, h.x, h.y, h.z, tostring(ground), GetGameTimer()-started))
         message = 'Hospital surface unavailable. Please wait, then press E to retry.'
     end
+    releaseStreaming()
     FreezeEntityPosition(ped, false)
     DoScreenFadeIn(500)
     moving = false

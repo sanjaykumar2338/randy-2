@@ -29,9 +29,17 @@ FreezeEntityPosition = function(_, value) frozen = value end
 DoScreenFadeOut = function() faded = true end
 DoScreenFadeIn = function() faded = false end
 RequestCollisionAtCoord = function() end
-SetEntityCoordsNoOffset = function() end
+SetEntityCoordsNoOffset = function() error('Do not move before validation') end
 GetGroundZFor_3dCoord = function() return groundOK, TarrantMedical.hospital.z end
-HasCollisionLoadedAroundEntity = function() return groundOK end
+IsNewLoadSceneActive = function() return false end
+SetFocusPosAndVel = function() end
+ClearFocus = function() end
+NewLoadSceneStartSphere = function() return true end
+NewLoadSceneStop = function() end
+IsNewLoadSceneLoaded = function() return groundOK end
+StartExpensiveSynchronousShapeTestLosProbe = function() return 1 end
+GetShapeTestResult = function() return 2, true, {z=TarrantMedical.hospital.z}, {z=1}, 0 end
+IsAnyVehicleNearPoint = function() return false end
 NetworkResurrectLocalPlayer = function() resurrects = resurrects+1 hp=200 end
 IsControlJustReleased = function() local value=pressed pressed=false return value end
 for _, name in ipairs({'ClearPedTasksImmediately','ClearPedBloodDamage','RestorePlayerStamina','SetGameplayCamRelativeHeading','SetGameplayCamRelativePitch','SetTextFont','SetTextScale','SetTextCentre','SetTextColour','SetTextOutline','BeginTextCommandDisplayText','EndTextCommandDisplayText'}) do _G[name]=function() end end
