@@ -1019,6 +1019,7 @@ try {
         $ResourcesDirectory = Resolve-LocalPath -Path $ResourcesDirectory
     }
     $resourceSpecs = @(
+        @{ Name = 'tarrant_medical'; Category = '[tarrant]'; Relative = '[tarrant]\tarrant_medical' },
         @{ Name = 'ox_lib'; Category = '[ox]'; Relative = '[ox]\ox_lib' },
         @{ Name = 'oxmysql'; Category = '[ox]'; Relative = '[ox]\oxmysql' },
         @{ Name = 'ox_target'; Category = '[ox]'; Relative = '[ox]\ox_target' },

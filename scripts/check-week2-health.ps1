@@ -37,7 +37,7 @@ foreach ($spec in @(@{Name='MariaDB';Port=$dbPort},@{Name='txAdmin';Port=$TxAdmi
 }
 try {
     $info = Invoke-RestMethod -Uri "http://127.0.0.1:$GamePort/info.json" -TimeoutSec 5
-    foreach ($resource in @('oxmysql','qbx_core','ox_inventory','pma-voice','tarrant_ops')) {
+    foreach ($resource in @('oxmysql','qbx_core','ox_inventory','pma-voice','tarrant_medical','tarrant_ops')) {
         if ($info.resources -contains $resource) { Pass "FXServer reports resource: $resource." } else { Fail "FXServer does not report resource: $resource." }
     }
 } catch { Fail "FXServer info endpoint failed: $($_.Exception.Message)" }
@@ -55,7 +55,7 @@ if (-not $startupEvents) {
 }
 else {
     $startup = $startupEvents[-1]
-    $requiredStartupResources = @('ox_lib','oxmysql','qbx_core','qbx_vehicles','ox_target','ox_inventory','qbx_spawn','illenium-appearance','qbx_hud','pma-voice')
+    $requiredStartupResources = @('ox_lib','oxmysql','qbx_core','qbx_vehicles','ox_target','ox_inventory','qbx_spawn','illenium-appearance','qbx_hud','pma-voice','tarrant_medical')
     $healthFailuresBefore = $failures
     if ($startup.message -ne 'Startup readiness passed') { Fail 'Latest tarrant_ops health.startup event did not report readiness success.' }
     if ($startup.fields.healthy -isnot [bool] -or -not $startup.fields.healthy) { Fail 'Latest tarrant_ops health.startup event is not healthy.' }

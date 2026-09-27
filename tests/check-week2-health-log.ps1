@@ -11,6 +11,7 @@ $testRoot = Join-Path $repositoryRoot 'runtime\health-log-regression'
 $resources = [ordered]@{
     ox_lib='started'; oxmysql='started'; qbx_core='started'; qbx_vehicles='started'; ox_target='started'
     ox_inventory='started'; qbx_spawn='started'; 'illenium-appearance'='started'; qbx_hud='started'; 'pma-voice'='started'
+    tarrant_medical='started'
 }
 
 function Invoke-Fixture([string]$Name, [string]$Json, [bool]$ShouldPass, [string]$ExpectedFailure) {

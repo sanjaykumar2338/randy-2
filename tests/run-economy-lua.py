@@ -8,5 +8,7 @@ os.chdir(root)
 sys.path.insert(0, str(root / 'runtime' / 'economy-test-tools'))
 from lupa.lua54 import LuaRuntime
 
-for name in ('check-tarrant-employment.lua', 'check-tarrant-world.lua'):
+for name in ('check-tarrant-employment.lua', 'check-tarrant-world.lua',
+             'check-tarrant-medical.lua', 'check-tarrant-medical-client.lua'):
     LuaRuntime().execute((root / 'tests' / name).read_text(encoding='utf-8'))
+LuaRuntime().execute((root / 'resources/[tarrant]/tarrant_employment/test-client-marker.lua').read_text(encoding='utf-8'))

@@ -151,7 +151,7 @@ else
   fail ".env is not ignored by Git"
 fi
 
-for resource in oxmysql ox_lib ox_inventory ox_target qbx_core qbx_spawn qbx_hud qbx_vehicles illenium-appearance pma-voice tarrant_ops; do
+for resource in oxmysql ox_lib ox_inventory ox_target qbx_core qbx_spawn qbx_hud qbx_vehicles illenium-appearance pma-voice tarrant_medical tarrant_ops; do
   if find "$QBOX_RESOURCES_DIR" -mindepth 1 -maxdepth 3 -type d -name "$resource" -print -quit 2>/dev/null | grep -q .; then
     ok "$resource resource found in deployed runtime"
   else

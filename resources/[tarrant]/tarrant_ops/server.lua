@@ -1,6 +1,6 @@
 local requiredResources = {
     'ox_lib', 'oxmysql', 'qbx_core', 'qbx_vehicles', 'ox_target',
-    'ox_inventory', 'qbx_spawn', 'illenium-appearance', 'pma-voice', 'qbx_hud'
+    'ox_inventory', 'qbx_spawn', 'illenium-appearance', 'pma-voice', 'qbx_hud', 'tarrant_medical'
 }
 
 local function identifierSuffix(source, kind)

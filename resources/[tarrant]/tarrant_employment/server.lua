@@ -7,15 +7,21 @@ local function near(src, coords)
 end
 local function validPlayer(src)
     local p = exports.qbx_core:GetPlayer(src)
-    if not p or p.PlayerData.metadata.isdead or p.PlayerData.metadata.inlaststand then return end
+    if not p or p.PlayerData.metadata.isdead or p.PlayerData.metadata.inlaststand
+        or GetEntityHealth(GetPlayerPed(src)) <= 100 then return end
     return p
 end
 local function shiftFor(src)
-    local p, shift = validPlayer(src), shifts[src]
+    local p, shift = exports.qbx_core:GetPlayer(src), shifts[src]
     if not p or not shift or shift.citizen ~= p.PlayerData.citizenid
         or p.PlayerData.job.name ~= shift.job or not p.PlayerData.job.onduty
         or os.time() - shift.started > cfg.routeLifetime then
         shifts[src] = nil
+        return
+    end
+    if p.PlayerData.metadata.isdead or p.PlayerData.metadata.inlaststand
+        or GetEntityHealth(GetPlayerPed(src)) <= 100 then
+        shift.ready = nil
         return
     end
     return shift, cfg.jobs[shift.job]
@@ -78,3 +84,7 @@ lib.callback.register('tarrant_employment:stop', function(src)
 end)
 AddEventHandler('playerDropped', function() shifts[source], busy[source] = nil, nil end)
 AddEventHandler('qbx_core:server:playerLoggedOut', function(src) shifts[src] = nil end)
+AddEventHandler('tarrant_medical:server:death', function(src)
+    -- Cancel only the unfinished action; completed stop indices remain intact.
+    if shifts[src] then shifts[src].ready = nil end
+end)

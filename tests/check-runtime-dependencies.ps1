@@ -17,6 +17,7 @@ $baseConfig = [System.IO.File]::ReadAllText($baseConfigPath)
 $expectedCommit = '6c9d96ed7a02e30912f1a0ce92629bf9afbbca8c'
 
 $checks = @(
+    @{ Name = 'civilian recovery starts before operations readiness'; Passed = $serverConfig -match 'ensure tarrant_medical\s+ensure tarrant_ops' -and $installer -match 'ensure tarrant_medical\s+ensure tarrant_ops' },
     @{ Name = 'server configuration starts pma-voice'; Passed = $serverConfig -match '(?m)^ensure pma-voice\s*$' },
     @{ Name = 'runtime installer pins pma-voice 7.0.1'; Passed = $installer -match "Name='pma-voice'; Version='7\.0\.1'" },
     @{ Name = 'runtime installer pins the accepted pma-voice commit'; Passed = $installer -match [regex]::Escape("`$pmaVoiceCommit = '$expectedCommit'") },

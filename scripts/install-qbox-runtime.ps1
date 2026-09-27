@@ -402,6 +402,7 @@ ensure qbx_spawn
 ensure illenium-appearance
 ensure pma-voice
 ensure qbx_hud
+ensure tarrant_medical
 ensure tarrant_ops
 
 exec misc.cfg

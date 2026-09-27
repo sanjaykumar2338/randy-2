@@ -8,6 +8,9 @@ dofile(root .. 'config.lua')
 local cfg = TarrantEmployment
 local position, pressed, menu, loop, marker, routeBlip = cfg.center, false, nil, nil, nil, 0
 local handlers, finished, cancelled, paid = {}, 0, false, false
+local text, context, dead, inProgress, dieInProgress = nil, nil, false, false, false
+LocalPlayer = { state = { isLoggedIn = true } }
+IsEntityDead = function() return dead end
 lib = {
     callback = { await = function(name)
         if name == 'tarrant_employment:finish' then
@@ -19,11 +22,22 @@ lib = {
         return true
     end },
     registerContext = function(context) menu = context end,
-    showContext = function() end,
-    showTextUI = function() end,
-    hideTextUI = function() end,
+    showContext = function(id) context = id end,
+    getOpenContextMenu = function() return context end,
+    hideContext = function() context = nil end,
+    showTextUI = function(value) text = value end,
+    hideTextUI = function() text = nil end,
+    isTextUIOpen = function() return text ~= nil, text end,
+    progressActive = function() return inProgress end,
+    cancelProgress = function() inProgress = false end,
     notify = function() end,
     progressCircle = function()
+        if dieInProgress then
+            inProgress, dead, dieInProgress = true, true, false
+            handlers['tarrant_medical:client:death']()
+            assert(not inProgress, 'death must cancel owned progress')
+            return false
+        end
         if cancelled then cancelled = false return false end
         return true
     end
@@ -55,17 +69,36 @@ local function tick()
     marker = nil
     local ok, err = coroutine.resume(loop)
     assert(ok, err)
+    pressed = false -- A released-control edge cannot carry into a later frame.
     return marker
 end
 local function selectJob(name)
+    handlers['QBCore:Client:OnPlayerLoaded']()
     position = cfg.center
     pressed = true
     tick()
     for _, option in ipairs(menu.options) do
-        if option.title == cfg.jobs[name].label then option.onSelect() return end
+        if option.title == cfg.jobs[name].label then context = nil option.onSelect() return end
     end
     error('job missing from menu')
 end
+position = vec3(cfg.center.x + 24, cfg.center.y, cfg.center.z)
+assert(tick() and not text, 'center approach marker without premature E prompt')
+position = vec3(cfg.center.x + 26, cfg.center.y, cfg.center.z)
+assert(not tick(), 'center marker outside approach radius')
+position = cfg.center
+assert(tick().z == cfg.center.z - 0.9 and text == '[E] Employment Center')
+text = 'Other resource'
+tick() assert(text == 'Other resource')
+position = vec3(0,0,0) tick() assert(text == 'Other resource')
+text = nil position = cfg.center tick() assert(text == '[E] Employment Center')
+pressed = true tick() assert(context == 'tarrant_jobs' and not text)
+menu.onExit() context = nil tick() assert(text == '[E] Employment Center')
+pressed = true tick() position = vec3(0,0,0) tick() assert(not context and not text)
+position = cfg.center pressed = true tick()
+dead = true handlers['tarrant_medical:client:death']()
+assert(not context and not text and not tick())
+dead = false
 selectJob('garbage')
 local first, second = cfg.jobs.garbage.stops[1], cfg.jobs.garbage.stops[2]
 position = vec3(first.x + 20, first.y, first.z)
@@ -89,6 +122,10 @@ tick()
 assert(finished == 1, 'E at old stop must not advance the next task')
 position = second
 assert(tick().x == second.x, 'marker must move to the next task')
+dieInProgress = true pressed = true tick()
+assert(finished == 1 and not paid and not tick(), 'death cancels unfinished action and hides marker')
+dead = false
+assert(tick().x == second.x, 'recovery retains completed stop progression')
 pressed = true
 tick()
 assert(finished == 2 and paid and not tick(), 'final completion must clear the marker')
@@ -116,6 +153,6 @@ assert(not tick(), 'off duty must clear the marker')
 selectJob('garbage')
 position = first
 assert(tick())
-handlers.onResourceStop('tarrant_employment')
+handlers.onClientResourceStop('tarrant_employment')
 assert(not tick(), 'resource stop must clear the marker')
 print('PASS: employment marker visibility, cancellation, progression and cleanup')

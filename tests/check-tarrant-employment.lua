@@ -50,6 +50,20 @@ assert(call('begin')) assert(not call('finish'))
 now = now + cfg.secondsPerStop
 assert(call('finish') == 2) assert(not call('finish'))
 coords = cfg.jobs.garbage.stops[2]
+assert(call('begin'))
+handlers['tarrant_medical:server:death'](1)
+now = now + cfg.secondsPerStop
+assert(not call('finish') and paid == 0, 'death invalidates unfinished action')
+p.PlayerData.metadata.isdead = true
+assert(not call('begin'))
+p.PlayerData.metadata.isdead = false
+assert(not call('finish'), 'revive cannot complete an invalidated action')
+assert(call('begin'))
+local normalHealth = GetEntityHealth
+GetEntityHealth = function() return 100 end
+now = now + cfg.secondsPerStop
+assert(not call('finish') and paid == 0, 'native death must block payment before metadata replication')
+GetEntityHealth = normalHealth
 assert(call('begin')) now = now + cfg.secondsPerStop
 assert(call('finish') == 0 and paid == cfg.jobs.garbage.pay and saves == 2)
 assert(not call('finish') and paid == cfg.jobs.garbage.pay)
