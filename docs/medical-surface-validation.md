@@ -1,5 +1,9 @@
 # Medical hospital surface validation follow-up
 
+> Historical c8aee71 notes. The txAdmin recovery instructions, freeze behavior and
+> one-file deployment below are superseded by [medical-admin-recovery.md](medical-admin-recovery.md).
+> Do not use Heal: Myself to recover this test character.
+
 ## Diagnosis and scope
 
 The live test proved death detection, the 30-second countdown and E input work.

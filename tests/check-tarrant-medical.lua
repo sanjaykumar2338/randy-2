@@ -1,3 +1,5 @@
+local commands = {}
+RegisterCommand = function(name, fn) commands[name] = fn end
 local root = 'resources/[tarrant]/tarrant_medical/'
 dofile(root .. 'config.lua')
 assert(loadfile(root .. 'fxmanifest.lua'))
@@ -85,3 +87,17 @@ data.citizenid = 'another' data.metadata = {} metadata = data.metadata hp = 200
 assert(not call('status'), 'no cross-character recovery')
 assert(data.money.cash == 90 and data.money.bank == 1000 and #data.items == 1)
 print('PASS: medical server death, countdown, authority, replay, external revive, restart/reconnect, character isolation and money/items preservation')
+
+hp=0 now=500 assert(call('status'))
+local before=#events
+commands.medical_recover_here(1, {'1'})
+assert(#events==before, 'client cannot authorize rescue')
+commands.medical_recover_here(0, {'1'})
+assert(events[#events][1]=='tarrant_medical:client:recoverHere')
+assert(call('status').pending and metadata.isdead and hp==0)
+commands.medical_recover_here(0, {'1'})
+now=521 assert(not call('status').pending and metadata.isdead)
+commands.medical_recover_here(0, {'1'})
+hp=200 pos={x=1000,y=1000,z=50}
+assert(not call('status') and not metadata.tarrantRecovery and metadata.hunger==25)
+print('PASS: console-only rescue, duplicate/expiry, persistence on rejection and completion away from hospital')

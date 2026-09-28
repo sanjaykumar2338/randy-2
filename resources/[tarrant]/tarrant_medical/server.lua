@@ -98,8 +98,8 @@ local function reconcile(src)
     if isDead then session.observedDead = true end
     if session.observedDead and not isDead and GetPlayerPed(src) ~= 0 then
         -- Native health is authoritative here, including external/admin revives
-        -- during a pending relocation. Only hospital arrivals receive recovery needs.
-        if session.pending and not arrived(src) then session.pending = nil end
+        -- during a pending relocation. Hospital arrivals and console rescues receive recovery needs.
+        if session.pending and not session.pending.rescue and not arrived(src) then session.pending = nil end
         finish(src, session)
         return
     end
@@ -147,3 +147,21 @@ AddEventHandler('qbx_core:server:playerLoggedOut', function(src)
 end)
 -- On stop, persisted death metadata and state remain authoritative. A restart
 -- reconstructs sessions; stopping this resource must never grant a free revive.
+
+-- Deliberately console-only: no client event, ACE/config change or metadata wipe.
+RegisterCommand('medical_recover_here', function(src, args)
+    if src ~= 0 then return end
+    local target = tonumber(args[1])
+    if not target or target < 1 or target % 1 ~= 0 or not player(target) then
+        print('[tarrant_medical] Usage: medical_recover_here <online player server ID>')
+        return
+    end
+    local session = reconcile(target)
+    if not session or session.pending or not dead(target) or GetPlayerRoutingBucket(target) ~= 0 then
+        print('[tarrant_medical] Rescue refused: require dead player, public bucket and no pending transfer. Retry after lease expiry.')
+        return
+    end
+    session.pending = { expires = os.time() + cfg.requestTimeout, rescue = true }
+    print(('[tarrant_medical] Console requested validated ground recovery for player %d'):format(target))
+    TriggerClientEvent('tarrant_medical:client:recoverHere', target)
+end, false)

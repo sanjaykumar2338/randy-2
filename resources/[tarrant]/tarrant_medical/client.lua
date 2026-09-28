@@ -18,7 +18,6 @@ local function cleanup()
     sawNativeDeath = false
     releaseStreaming()
     if moving then
-        FreezeEntityPosition(PlayerPedId(), false)
         DoScreenFadeIn(250)
         moving = false
     end
@@ -54,18 +53,24 @@ RegisterNetEvent('tarrant_medical:client:state', function(state)
     apply(state)
 end)
 
-local function relocate(ticket)
-    local ped, h = PlayerPedId(), cfg.hospital
+local function relocate(ticket, here)
+    if stopped or ticket ~= generation or not loaded then return end
+    local ped = PlayerPedId()
+    if not IsEntityDead(ped) then return end
+    local pos = GetEntityCoords(ped)
+    local h = here and { x=pos.x, y=pos.y, z=pos.z, heading=GetEntityHeading(ped) } or cfg.hospital
+    if IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false) then
+        message = 'Recovery refused: disable NoClip/freeze and leave the vehicle first.'
+        return
+    end
     moving = true
     DoScreenFadeOut(250)
-    FreezeEntityPosition(ped, true)
     local started = GetGameTimer()
     local expires = started + cfg.collisionTimeoutMs
     local ground, ready, reason = nil, false, 'scene_busy'
     local function externalRevive()
         generation = generation + 1
         releaseStreaming()
-        FreezeEntityPosition(ped, false)
         DoScreenFadeIn(250)
         moving, pending = false, false
         -- Retain observed-death history until server confirmation, so a delayed
@@ -82,6 +87,10 @@ local function relocate(ticket)
         if sceneOwned then
             repeat
                 if not IsEntityDead(ped) then externalRevive() return end
+                if IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false) then
+                    reason = 'ped_frozen_or_in_vehicle'
+                    break
+                end
                 RequestCollisionAtCoord(h.x, h.y, h.z)
                 reason = 'scene_not_loaded'
                 if IsNewLoadSceneLoaded() then
@@ -113,9 +122,15 @@ local function relocate(ticket)
     end
     if stopped or ticket ~= generation then return end
     if not IsEntityDead(ped) then externalRevive() return end
+    local current = GetEntityCoords(ped)
+    if IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false)
+        or (here and ((current.x-h.x)^2 + (current.y-h.y)^2 + (current.z-h.z)^2 > 0.25)) then
+        ready, reason = false, 'ped_moved_or_frozen'
+    end
     if ready then
         NetworkResurrectLocalPlayer(h.x, h.y, ground + 1.0, h.heading, false, false)
         ped = PlayerPedId()
+        SetEntityVelocity(ped, 0.0, 0.0, 0.0)
         SetEntityHealth(ped, GetEntityMaxHealth(ped))
         ClearPedTasksImmediately(ped)
         ClearPedBloodDamage(ped)
@@ -123,17 +138,33 @@ local function relocate(ticket)
         SetPlayerControl(PlayerId(), true, 0)
         SetGameplayCamRelativeHeading(0.0)
         SetGameplayCamRelativePitch(0.0, 1.0)
-        message = 'Recovery complete. Confirming hospital arrival...'
+        if here then
+            print(('[tarrant_medical] Validated recovery surface: %.4f, %.4f, %.4f, %.4f; visually inspect before using as hospital pavement')
+                :format(h.x, h.y, ground, h.heading))
+        end
+        message = 'Recovery complete. Confirming recovery...'
     else
         print(('[tarrant_medical] Hospital validation failed: %s; target=%.4f,%.4f,%.4f; ground=%s; elapsed=%dms')
             :format(reason, h.x, h.y, h.z, tostring(ground), GetGameTimer()-started))
         message = 'Hospital surface unavailable. Please wait, then press E to retry.'
     end
     releaseStreaming()
-    FreezeEntityPosition(ped, false)
     DoScreenFadeIn(500)
     moving = false
 end
+
+-- Only the server console can issue this exception to civilian hospital recovery.
+RegisterNetEvent('tarrant_medical:client:recoverHere', function()
+    if source ~= 65535 or stopped or not loaded or moving or pending
+        or not IsEntityDead(PlayerPedId()) then return end
+    enter()
+    pending = true
+    local ticket = generation
+    CreateThread(function()
+        relocate(ticket, true)
+        if ticket == generation then pending = false end
+    end)
+end)
 
 CreateThread(function()
     while not stopped do

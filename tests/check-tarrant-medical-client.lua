@@ -1,3 +1,8 @@
+SetEntityVelocity = function() end
+IsEntityPositionFrozen = function() return false end
+IsPedInAnyVehicle = function() return false end
+GetEntityHeading = function() return 70 end
+GetEntityCoords = function() return {x=1000,y=1000,z=50} end
 local root = 'resources/[tarrant]/tarrant_medical/'
 dofile(root .. 'config.lua')
 local threads, handlers = {}, {}
@@ -55,7 +60,7 @@ sync({remaining=30,pending=false})
 pressed=true tick(2) assert(requests==0 and resurrects==0)
 pressed=false now=30000 tick(2) assert(label:find('%[E%]') and resurrects==0)
 accepted=true pressed=true tick(2) tick(3)
-assert(requests==1 and frozen and faded)
+assert(requests==1 and not frozen and faded)
 pressed=true tick(2) assert(requests==1)
 tick(3) assert(resurrects==1 and hp==200 and not frozen and not faded)
 sync(false) label=nil tick(2) assert(not label)
@@ -70,7 +75,7 @@ source=1 sync({remaining=30,pending=false}) assert(hp==200)
 source=65535
 -- Stop during collision wait always releases this resource's freeze/fade.
 hp=0 sync({remaining=0,pending=false}) groundOK=false pressed=true tick(2) tick(4)
-assert(frozen and faded)
+assert(not frozen and faded)
 handlers.onClientResourceStop('tarrant_medical')
 assert(not frozen and not faded)
 tick(4) assert(resurrects==1, 'stopped coroutine must not resurrect')

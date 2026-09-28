@@ -1,3 +1,8 @@
+SetEntityVelocity = function() end
+IsEntityPositionFrozen = function() return false end
+IsPedInAnyVehicle = function() return false end
+GetEntityHeading = function() return 70 end
+GetEntityCoords = function() return {x=1000,y=1000,z=50} end
 -- Destination validation must never use a premature teleport as a streaming aid.
 local root = 'resources/[tarrant]/tarrant_medical/'
 dofile(root .. 'config.lua')
@@ -7,6 +12,8 @@ local focus, scene, frozen, faded, logs, threads, handlers, scenario
 local position, target
 local function reset(options)
     scenario = options or {}
+    IsEntityPositionFrozen = function() return scenario.frozen or false end
+    IsPedInAnyVehicle = function() return scenario.inVehicle or false end
     now, health, pressed, moves, resurrects, groundCalls = 0, 0, false, 0, 0, 0
     focus, scene, frozen, faded = false, false, false, false
     logs, threads, handlers = {}, {}, {}
@@ -29,7 +36,7 @@ local function reset(options)
     TriggerEvent = function() end
     exports = { ox_inventory = { closeInventory=function() end } }
     lib = { callback={await=function() return true end} }
-    FreezeEntityPosition = function(_, value) frozen=value end
+    FreezeEntityPosition = function() error('medical must not change foreign freeze state') end
     DoScreenFadeOut = function() faded=true end
     DoScreenFadeIn = function() faded=false end
     RequestCollisionAtCoord = function() end
@@ -45,16 +52,16 @@ local function reset(options)
         groundCalls=groundCalls+1
         if scenario.noGround then return false, 0 end
         if scenario.wrongGround or (scenario.transientGround and groundCalls==1) then return true,h.z-10 end
-        return true,h.z
+        return true,scenario.groundZ or h.z
     end
     StartExpensiveSynchronousShapeTestLosProbe = function() return 1 end
     GetShapeTestResult = function()
-        return 2, not scenario.noCollision, {x=target.x,y=target.y,z=h.z-(scenario.wrongRayHeight and 3 or 0)},
+        return 2, not scenario.noCollision, {x=target.x,y=target.y,z=(scenario.groundZ or h.z)-(scenario.wrongRayHeight and 3 or 0)},
             {x=0,y=0,z=scenario.steep and 0.4 or 1}, 0
     end
     IsAnyVehicleNearPoint = function() return scenario.vehicle or false end
     NetworkResurrectLocalPlayer = function(x,y,z,heading)
-        assert(heading==h.heading)
+        assert(heading==h.heading or heading==70)
         resurrects=resurrects+1 health=200 position={x=x,y=y,z=z}
     end
     IsControlJustReleased = function() local value=pressed pressed=false return value end
@@ -105,5 +112,27 @@ for _,event in ipairs({'onClientResourceStop','QBCore:Client:OnPlayerUnload'}) d
 end
 reset({noGround=true}) begin() health=200 now=50 tick(3)
 assert(moves==0 and resurrects==0 and position.x==1000 and not focus and not scene and not frozen and not faded)
+-- NoClip/foreign freeze must never be released, even on stop or external revive.
+reset({frozen=true}) begin() unchanged()
+assert(not faded and not scene)
+reset({noGround=true}) begin() scenario.frozen=true now=50 tick(3) unchanged()
+assert(not faded and not scene)
+reset({inVehicle=true}) begin() unchanged()
+reset({groundZ=50})
+handlers['tarrant_medical:client:recoverHere']()
+handlers['QBCore:Client:OnPlayerUnload']() tick(3) unchanged()
+assert(not scene and not faded)
+-- Console rescue validates the current location, refuses airborne/moving peds,
+-- and cannot be triggered as a local/client-origin event.
+reset({groundZ=50})
+source=1 handlers['tarrant_medical:client:recoverHere']() assert(#threads==2)
+source=65535 handlers['tarrant_medical:client:recoverHere']() tick(3) now=50 tick(3)
+assert(resurrects==1 and position.x==1000 and position.z==51 and #logs==1)
+reset({groundZ=40})
+handlers['tarrant_medical:client:recoverHere']() tick(3) now=8001 tick(3) unchanged()
+reset({groundZ=50})
+handlers['tarrant_medical:client:recoverHere']() tick(3)
+position={x=1005,y=1000,z=50} now=50 tick(3)
+assert(resurrects==0 and logs[1]:find('ped_moved_or_frozen'))
 print=originalPrint
 print('PASS: remote scene/surface validation, transient wrong Z, collision/slope/obstruction rejection, origin preservation, retry and streaming cleanup')
