@@ -1,3 +1,4 @@
+RegisterCommand = function() end
 SetEntityVelocity = function() end
 IsEntityPositionFrozen = function() return false end
 IsPedInAnyVehicle = function() return false end

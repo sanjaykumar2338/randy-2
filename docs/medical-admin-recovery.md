@@ -1,5 +1,8 @@
 # Validated operator recovery after the NoClip/heal failure
 
+> Follow-up after the fce08aa live rejection: use [medical-pavement-survey.md](medical-pavement-survey.md)
+> for read-only survey, mode diagnostics and the latest one-file deployment.
+
 ## Diagnosis and limits
 
 Live baseline is **201c1b1280896708c275398d697c2283dd2eb17d**, not c8aee714.

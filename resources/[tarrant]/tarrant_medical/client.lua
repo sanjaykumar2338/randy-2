@@ -59,7 +59,11 @@ local function relocate(ticket, here)
     if not IsEntityDead(ped) then return end
     local pos = GetEntityCoords(ped)
     local h = here and { x=pos.x, y=pos.y, z=pos.z, heading=GetEntityHeading(ped) } or cfg.hospital
+    local mode = here and 'recover_here' or 'hospital'
+    print(('[tarrant_medical] Recovery start: mode=%s; ped=%.4f,%.4f,%.4f; target=%.4f,%.4f,%.4f')
+        :format(mode, pos.x, pos.y, pos.z, h.x, h.y, h.z))
     if IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false) then
+        print(('[tarrant_medical] Recovery refused: mode=%s; ped_frozen_or_in_vehicle'):format(mode))
         message = 'Recovery refused: disable NoClip/freeze and leave the vehicle first.'
         return
     end
@@ -144,9 +148,10 @@ local function relocate(ticket, here)
         end
         message = 'Recovery complete. Confirming recovery...'
     else
-        print(('[tarrant_medical] Hospital validation failed: %s; target=%.4f,%.4f,%.4f; ground=%s; elapsed=%dms')
-            :format(reason, h.x, h.y, h.z, tostring(ground), GetGameTimer()-started))
-        message = 'Hospital surface unavailable. Please wait, then press E to retry.'
+        print(('[tarrant_medical] Recovery validation failed: mode=%s; reason=%s; target=%.4f,%.4f,%.4f; ped=%.4f,%.4f,%.4f; ground=%s; elapsed=%dms')
+            :format(mode, reason, h.x, h.y, h.z, current.x, current.y, current.z, tostring(ground), GetGameTimer()-started))
+        message = here and 'Local surface unavailable. Survey another pavement location; console retry required.'
+            or 'Hospital surface unavailable. Please wait, then press E to retry.'
     end
     releaseStreaming()
     DoScreenFadeIn(500)
@@ -156,7 +161,12 @@ end
 -- Only the server console can issue this exception to civilian hospital recovery.
 RegisterNetEvent('tarrant_medical:client:recoverHere', function()
     if source ~= 65535 or stopped or not loaded or moving or pending
-        or not IsEntityDead(PlayerPedId()) then return end
+        or not IsEntityDead(PlayerPedId()) then
+        if source == 65535 then
+            print('[tarrant_medical] recover_here event refused: stopped/unloaded, busy, or ped already alive')
+        end
+        return
+    end
     enter()
     pending = true
     local ticket = generation
@@ -220,3 +230,33 @@ AddEventHandler('onClientResourceStop', function(resource)
     stopped = true
     cleanup()
 end)
+
+-- Read-only local diagnostics. Never authorize a recovery or change player state.
+-- The ray is deliberately queried even if the ground native disagrees, so a
+-- rendered surface/terrain disagreement is visible without accepting either one.
+RegisterCommand('medical_survey_here', function()
+    if stopped or not loaded or not LocalPlayer.state.isLoggedIn or moving then
+        print('[tarrant_medical] Survey unavailable: not loaded or recovery in progress')
+        return
+    end
+    local ped = PlayerPedId()
+    local pos, heading = GetEntityCoords(ped), GetEntityHeading(ped)
+    local found, ground = GetGroundZFor_3dCoord(pos.x, pos.y, pos.z + 1.0, false)
+    local probe = StartExpensiveSynchronousShapeTestLosProbe(
+        pos.x, pos.y, pos.z + 1.0, pos.x, pos.y, pos.z - 2.5, 1, ped, 7)
+    local result, hit, point, normal = GetShapeTestResult(probe)
+    local rayFound = result == 2 and hit
+    local frozen = IsEntityPositionFrozen(ped)
+    local vehicle = IsPedInAnyVehicle(ped, false)
+    local dead = IsEntityDead(ped)
+    local collision = HasCollisionLoadedAroundEntity(ped)
+    local blocked = found and IsAnyVehicleNearPoint(pos.x, pos.y, ground + 1.0, 2.0)
+    local agrees = found and rayFound and math.abs(ground-pos.z) <= 2.0
+        and math.abs(point.z-ground) <= 0.25 and normal.z >= 0.9
+    print(('[tarrant_medical] Survey v1: ped=%.4f,%.4f,%.4f; heading=%.4f; dead=%s; frozen=%s; inVehicle=%s; collision=%s; groundFound=%s; ground=%s; rayStatus=%s; rayHit=%s; rayZ=%s; normalZ=%s; vehicleNear=%s; geometryAgrees=%s; aliveCandidate=%s (snapshot only; no recovery authorization)')
+        :format(pos.x, pos.y, pos.z, heading, tostring(dead), tostring(frozen), tostring(vehicle),
+            tostring(collision), tostring(found), tostring(ground), tostring(result), tostring(hit),
+            rayFound and tostring(point.z) or 'none', rayFound and tostring(normal.z) or 'none',
+            tostring(blocked), tostring(not not agrees),
+            tostring(not dead and not frozen and not vehicle and collision and agrees and not blocked)))
+end, false)
