@@ -1,10 +1,11 @@
 # Civilian recovery and Employment Center delivery
 
 **Current follow-up:** hospital recovery validates an explicit list of exterior
-candidates from live evidence; road/navmesh discovery is removed. Use
+candidates from live evidence; unavailable capsule clearance now permits a fresh
+ground-validated fallback, while confirmed obstacles reject a candidate. Use
 [medical-hospital-discovery.md](medical-hospital-discovery.md) for the current
-strategy, two-file deployment and acceptance steps. The historical single-point
-description below is superseded. Normal E recovery still needs live acceptance.
+strategy, client-only deployment from fe38012 and acceptance steps. The historical
+single-point description below is superseded. Normal E recovery still needs live acceptance.
 
 This is a staging candidate, not a claim of live Enhanced b156 acceptance.
 No deployment, private configuration changes, database operations, artifact

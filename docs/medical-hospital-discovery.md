@@ -1,13 +1,38 @@
 # Medical recovery: explicit hospital exterior candidates
 
-Current follow-up to failed live `09561cd031708f65ca5c3a803ad4ab7fbb25d37c`.
-Replaces dynamic road/navmesh selection with a fixed, ordered candidate list and
-local physical validation. No VPS deployment was performed by the coding agent.
+Current follow-up to failed live `fe380120605a5a3829b165889ffc3480680a71d0`.
+Retains the four explicit candidates and reliable local physical validation;
+unavailable body-clearance probes no longer veto otherwise valid exterior ground.
+No VPS deployment was performed by the coding agent.
 Live acceptance is still required; no admin command is part of civilian recovery.
 
 ## What failed
 
-The previous implementation coupled safe placement to unrelated road-query rules.
+The latest live failure had valid street-level ground but every candidate reported
+`body_clearance_unavailable`, followed by `clearance_pending_at_end`. The code
+combined three distinct capsule outcomes into the same rejection: invalid handle
+(status 0), elapsed probe budget (250 ms), and completed hit (status 2, hit true).
+It repeatedly discarded/restarted jobs until the eight-second search deadline,
+where pending jobs were discarded without a final ground-based decision.
+
+[GetShapeTestResult](https://github.com/citizenfx/natives/blob/master/SHAPETEST/GetShapeTestResult.md)
+defines 0 as invalid, 1 as pending and 2 as complete; hit output is undefined for
+0/1. Pending or invalid therefore cannot establish an obstruction. The supplied
+logs do not establish why Enhanced did not complete these remote capsules, or
+distinguish every earlier rejection from a completed hit. No engine defect is
+claimed. The demonstrated code defect is treating unavailable clearance as unsafe
+ground and exhausting the recovery budget instead of using the explicit points.
+
+The fix polls capsules for at most 250 ms (or the remaining scene budget). A
+completed hit rejects that candidate as `body_obstructed`. Invalid or still-pending
+results use `clearance=ground_fallback` after fresh reliable surface checks. A
+completed clear result uses `clearance=confirmed_clear`. The final polling pass
+also runs at the shared deadline, so late scene loading cannot strand a validated
+candidate behind a pending capsule. The deadline bounds waiting; final synchronous
+surface checks still run before any resurrection. Unknown hit output is never
+interpreted as a positive or negative obstruction result.
+
+The earlier road-search implementation coupled safe placement to unrelated road-query rules.
 It refused flags including `64` (HIGHWAY), although that classification alone says
 nothing about collision or standing clearance at the destination. Its second road
 lookup could also reject a returned pavement point based on road-distance limits.
@@ -54,15 +79,19 @@ remains a streaming reference and server arrival-envelope center only.
    within 0.25 m, and ground within 2 m of the candidate's own floor hint. This
    excludes the observed high 48.75/89.62 and underground 16.98 layers here.
 3. Require slope normal Z >=0.9 and supported footprint edges 0.45 m around the
-   center. Require no vehicle within 2 m and a clear standing-body capsule, including
-   collidable world, objects, peds and vehicles. A low ceiling fails this test; a
-   canopy above the player does not fail merely because it exists.
+   center. Require no vehicle within 2 m. Try a standing-body capsule covering
+   collidable world, objects, peds and vehicles: a completed positive hit rejects
+   the candidate. Invalid, pending or timed-out clearance permits ground fallback
+   for this explicit candidate list only. A canopy above the player does not fail
+   merely because it exists. When the capsule is unavailable, overhead/object
+   clearance is unknown; the fallback does not claim to have measured it.
 4. Check all eligible candidates without blocking on one pending capsule. Retain
-   the shared eight-second limit and per-probe 250 ms limit. Prefer the first
+   the shared eight-second wait limit and per-probe 250 ms limit. Prefer the first
    candidate whose checks finish successfully; failed candidates never move the ped.
-5. After the capsule result, freshly check the local floor, ray, slope, footprint
-   and vehicles. The scene must be loaded and floor must remain within 0.05 m of
-   the checked capsule floor. No yield separates final validation and resurrection.
+5. After the capsule result or fallback decision, freshly check the local floor,
+   ray, slope, footprint and vehicles. The scene must be loaded and floor must
+   remain within 0.05 m of the initially sampled floor. No yield separates final
+   validation and resurrection.
 6. Use the existing shared resurrection block at **measured ground +1 m**, restore
    collision, unfreeze the recovered ped, clear velocity/tasks/blood, restore health
    and control, release owned fade/streaming, and let server reconciliation clear
@@ -97,14 +126,22 @@ stalled early probes, stale results, lifecycle cleanup, external revive and late
 death packets, and read-only diagnostics/config preservation. Server regressions
 check needs, Save and retained assets for **every** explicit candidate.
 
+The latest regression reproduces all four capsules indefinitely pending above
+valid measured ground: normal E recovery completes after 250 ms via the first
+candidate, restoring collision, unfreeze, task clearing and control exactly once.
+Invalid status 0 also recovers; undefined hit=true in either status cannot veto
+recovery. Tests retain completed-hit rejection, each later candidate's unknown-
+clearance fallback, fresh safety-check failures, a scene loaded at 7950 ms with
+pending clearance at 8000 ms, and delayed scheduling past the polling deadline.
+
 Native mocks do not certify the live map. In particular the street references are
 not surveyed pedestrian spawn approvals. Runtime validation and the two-player
 live acceptance below remain mandatory before claiming hospital recovery PASS.
 
 ## Backup-first VPS deployment (operator only)
 
-From deployed 09561cd, replace **client.lua and config.lua together**. Keep the
-existing server.lua. In VPS Bash as the runtime owner:
+From deployed fe38012, replace **client.lua only**. The existing four-candidate
+config.lua and server.lua are unchanged. In VPS Bash as the runtime owner:
 
 ```bash
 set -euo pipefail
@@ -113,10 +150,10 @@ cd /opt/randy-2
 git fetch origin main
 git merge-base --is-ancestor "$COMMIT" origin/main
 MEDICAL='/opt/randy-2/runtime/qbox-server-data/resources/[tarrant]/tarrant_medical'
-BACKUP="/opt/randy-2/runtime/medical-candidates-backup-$(date -u +%Y%m%dT%H%M%SZ)"
+BACKUP="/opt/randy-2/runtime/medical-clearance-backup-$(date -u +%Y%m%dT%H%M%SZ)"
 umask 077
 mkdir -m 700 "$BACKUP"
-for f in client.lua config.lua; do
+for f in client.lua; do
   cp -p "$MEDICAL/$f" "$BACKUP/$f.before"
   git show "$COMMIT:resources/[tarrant]/tarrant_medical/$f" > "$BACKUP/$f.after"
   test -s "$BACKUP/$f.after"
@@ -127,7 +164,7 @@ printf 'Keep rollback directory: %s\n' "$BACKUP"
 In **txAdmin server console**: `stop tarrant_medical`. Then, in the same Bash session:
 
 ```bash
-for f in client.lua config.lua; do
+for f in client.lua; do
   cat "$BACKUP/$f.after" > "$MEDICAL/$f"
   cmp -s "$MEDICAL/$f" "$BACKUP/$f.after"
 done
@@ -136,11 +173,11 @@ done
 In **txAdmin server console**: `ensure tarrant_medical`. No `refresh`, server-wide
 restart, private config, artifact or database changes are needed.
 
-Rollback: stop medical, restore both `.before` files in the same Bash session,
+Rollback: stop medical, restore the `.before` file in the same Bash session,
 then ensure medical. This restores the previous known live failure.
 
 ```bash
-for f in client.lua config.lua; do
+for f in client.lua; do
   test -s "$BACKUP/$f.before"
   cat "$BACKUP/$f.before" > "$MEDICAL/$f"
 done

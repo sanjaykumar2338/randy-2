@@ -140,8 +140,8 @@ local function hospitalSurface(h, ped)
     end
     if math.abs(ground-h.z) > 2.0 then return false, ground, 'floor_height_mismatch', evidence end
     if normal.z < 0.9 then return false, ground, 'surface_too_steep', evidence end
-    -- A distant canopy is not an obstruction. The standing-body capsule below
-    -- checks actual head/body clearance, including low ceilings and objects.
+    -- A distant canopy is not an obstruction. Footprint support is mandatory;
+    -- the optional capsule below rejects only a positively confirmed obstacle.
     for _, offset in ipairs({{0.45,0}, {-0.45,0}, {0,0.45}, {0,-0.45}}) do
         local x, y = h.x+offset[1], h.y+offset[2]
         local probe = StartExpensiveSynchronousShapeTestLosProbe(x, y, ground+0.5, x, y, ground-0.5, 1, ped, 4)
@@ -182,33 +182,39 @@ local function prepareHospital(ped, ticket, abort)
         reported[index] = why
     end
     -- Queue every candidate's collision before waiting. Capsule jobs are polled round
-    -- robin: an early pending test never consumes later candidates' time budget.
+    -- robin and are advisory when unavailable; reliable surface checks remain mandatory.
     for _, candidate in ipairs(search.candidates) do RequestCollisionAtCoord(candidate.x, candidate.y, candidate.z) end
-    while GetGameTimer() < expires and not cancelled() do
+    while not cancelled() do
         if IsNewLoadSceneLoaded() then
             loadedAt = loadedAt or GetGameTimer()
             for index, candidate in ipairs(search.candidates) do
-                if cancelled() or GetGameTimer() >= expires then break end
+                if cancelled() then break end
                 local job = jobs[index]
                 if job then
                     local result, blocked = GetShapeTestResult(job.probe)
                     local details = job.evidence .. ('; capsuleStatus=%s; capsuleHit=%s; capsuleAgeMs=%d')
                         :format(tostring(result), tostring(blocked), GetGameTimer()-job.started)
                     lastEvidence[index] = details
-                    if GetGameTimer() > job.expires or result == 0 or (result == 2 and blocked) then
-                        reject(index, 'body_clearance_unavailable', details)
-                    elseif result == 2 then
+                    -- Hit is defined only for status 2. Invalid/pending handles
+                    -- cannot prove obstruction, including at the search deadline.
+                    if result == 2 and blocked then
+                        reject(index, 'body_obstructed', details)
+                    elseif result == 2 or result == 0 or GetGameTimer() >= job.expires then
+                        local clearance = result == 2 and 'confirmed_clear' or 'ground_fallback'
                         -- Fresh local collision, slope, footprint and vehicles
-                        -- after the clearance result, without another yield.
+                        -- even when capsule completion is unavailable. The deadline
+                        -- bounds waiting, not these final checks; never yield here.
                         local ready, ground, why, fresh = hospitalSurface(job.h, ped)
-                        if ready and math.abs(ground-job.ground) <= 0.05 and GetGameTimer() < expires then
-                            print(('[tarrant_medical] Hospital candidate accepted: index=%d; target=%.4f,%.4f,%.4f; %s; capsuleStatus=2; capsuleHit=false; elapsed=%dms')
+                        if ready and math.abs(ground-job.ground) <= 0.05 then
+                            fresh = fresh .. ('; clearance=%s; capsuleStatus=%s; capsuleHit=%s')
+                                :format(clearance, tostring(result), result == 2 and tostring(blocked) or 'unknown')
+                            print(('[tarrant_medical] Hospital candidate accepted: index=%d; target=%.4f,%.4f,%.4f; %s; elapsed=%dms')
                                 :format(index, job.h.x, job.h.y, ground, fresh, GetGameTimer()-started))
                             return true, job.h, ground, 'validated', fresh
                         end
                         reject(index, ready and 'surface_changed' or why, fresh)
                     end
-                elseif GetGameTimer() >= (retryAt[index] or 0) then
+                elseif GetGameTimer() < expires and GetGameTimer() >= (retryAt[index] or 0) then
                     attempts[index] = (attempts[index] or 0)+1
                     local h = { x=candidate.x, y=candidate.y, z=candidate.z, heading=candidate.heading }
                     RequestCollisionAtCoord(h.x, h.y, h.z)
@@ -222,12 +228,13 @@ local function prepareHospital(ped, ticket, abort)
                 end
             end
         else reason = 'scene_not_loaded' end
-        if GetGameTimer() < expires and not cancelled() then Wait(50) end
+        if GetGameTimer() >= expires then break end
+        if not cancelled() then Wait(50) end
     end
     if cancelled() then reason = 'cancelled' end
     for index in ipairs(search.candidates) do
         print(('[tarrant_medical] Hospital search summary: index=%d; attempts=%d; reason=%s; sceneLoadedAtMs=%s; %s')
-            :format(index, attempts[index] or 0, jobs[index] and 'clearance_pending_at_end' or reported[index] or reason,
+            :format(index, attempts[index] or 0, jobs[index] and reason or reported[index] or reason,
                 loadedAt and tostring(loadedAt-started) or 'never', lastEvidence[index] or 'ground=none'))
     end
     return false, nil, nil, reason, evidence

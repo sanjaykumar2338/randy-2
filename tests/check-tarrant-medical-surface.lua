@@ -7,7 +7,7 @@ assert(#candidates==4)
 local originalPrint=print
 local scenario, threads, handlers, commands, logs, now, health, position, pressed
 local scene, focus, faded, frozen, resurrects, collisionWrites, unfreezes, requests
-local probes, collisionRequests, upwardQueries, legacyCalls
+local probes, collisionRequests, upwardQueries, legacyCalls, controlRestores, taskClears
 local function at(x,y)
     for i,c in ipairs(candidates) do
         if (x-c.x)^2+(y-c.y)^2<1 then return (scenario.points or {})[i] or scenario, c.z, i end
@@ -24,6 +24,7 @@ local function reset(options)
     now,health,position,pressed=0,scenario.alive and 200 or 0,{x=1000,y=1000,z=50},false
     scene,focus,faded,frozen=false,false,false,false
     resurrects,collisionWrites,unfreezes,requests,upwardQueries,legacyCalls=0,0,0,0,0,0
+    controlRestores,taskClears=0,0
     LocalPlayer={state={isLoggedIn=true}} source=65535
     PlayerPedId=function() return 1 end
     PlayerId=function() return 1 end
@@ -107,8 +108,10 @@ local function reset(options)
     FreezeEntityPosition=function(_,value)
         assert(resurrects==1 and not value, 'never release foreign freeze on failure') frozen=false unfreezes=unfreezes+1
     end
+    SetPlayerControl=function(_,value) assert(resurrects==1 and value) controlRestores=controlRestores+1 end
+    ClearPedTasksImmediately=function() assert(resurrects==1) taskClears=taskClears+1 end
     IsControlJustReleased=function() local value=pressed pressed=false return value end
-    for _,name in ipairs({'SetEntityVelocity','SetPlayerControl','ClearPedTasksImmediately','ClearPedBloodDamage',
+    for _,name in ipairs({'SetEntityVelocity','ClearPedBloodDamage',
         'RestorePlayerStamina','SetGameplayCamRelativeHeading','SetGameplayCamRelativePitch','SetTextFont',
         'SetTextScale','SetTextCentre','SetTextColour','SetTextOutline','BeginTextCommandDisplayText',
         'EndTextCommandDisplayText','AddTextComponentSubstringPlayerName'}) do _G[name]=function() end end
@@ -126,13 +129,14 @@ local function finish(index)
 end
 local function unmoved(alive)
     assert(resurrects==0 and health==(alive and 200 or 0) and position.x==1000 and position.y==1000 and position.z==50)
-    assert(collisionWrites==0 and unfreezes==0)
+    assert(collisionWrites==0 and unfreezes==0 and controlRestores==0 and taskClears==0)
 end
 local function clean() assert(not scene and not focus and not faded and not frozen) end
 local function landed(index,delta)
     local c=candidates[index]
     assert(resurrects==1 and health==200 and position.x==c.x and position.y==c.y and position.z==c.z+(delta or 0)+1)
     assert(collisionWrites==1 and unfreezes==1 and legacyCalls==0 and upwardQueries==0) clean()
+    assert(controlRestores==1 and taskClears==1)
 end
 
 reset({delta=0.25}) begin() unmoved() assert(#collisionRequests>=#candidates)
@@ -157,6 +161,28 @@ end
 reset({ceiling=2.3}) begin() finish(3) landed(1)
 reset({points={[1]={ceiling=1.8}}}) begin() finish(3) landed(2)
 
+-- Exact fe38012 live failure: all four street floors/collision validate but
+-- every capsule stays pending. Recovery must complete via measured ground,
+-- without moving the corpse while waiting, new discovery, or admin recovery.
+for _,status in ipairs({1,0}) do
+    -- Non-complete statuses have undefined hit output; even true is not a veto.
+    reset({capsuleStatus=status,obstruction=true,delta=0.1}) begin() unmoved()
+    if status==1 then now=200 tick(3) unmoved() end
+    pressed=true tick(2) assert(requests==1)
+    finish(3) landed(1,0.1)
+    assert(now==(status==1 and 250 or 50))
+    assert(logs[#logs]:find('clearance=ground_fallback',1,true))
+    assert(logs[#logs]:find('capsuleHit=unknown',1,true))
+end
+for i=2,#candidates do
+    local points={}
+    for j=1,i-1 do points[j]={noGround=true} end
+    reset({capsuleStatus=1,points=points}) begin() finish(3) landed(i)
+end
+-- A completed positive hit remains a veto; an unknown later point can recover.
+reset({capsuleStatus=1,points={[1]={obstruction=true}}}) begin() finish(3) landed(2)
+assert(table.concat(logs,'\n'):find('reason=body_obstructed',1,true))
+
 for _,case in ipairs({
     {noGround=true,reason='ground_not_found'},
     {noCollision=true,reason='ground_collision_unavailable'},
@@ -168,10 +194,8 @@ for _,case in ipairs({
     {steep=true,reason='surface_too_steep'},
     {ledge=true,reason='unsafe_footprint'},
     {vehicle=true,reason='vehicle_at_spawn'},
-    {obstruction=true,reason='body_clearance_unavailable'},
-    {ceiling=1.8,reason='body_clearance_unavailable'},
-    {capsuleStatus=1,reason='body_clearance_unavailable'},
-    {capsuleStatus=0,reason='body_clearance_unavailable'},
+    {obstruction=true,reason='body_obstructed'},
+    {ceiling=1.8,reason='body_obstructed'},
 }) do
     reset(case) begin() unmoved() finish(3) unmoved() clean()
     assert(logs[#logs]:find(case.reason,1,true),case.reason)
@@ -190,12 +214,26 @@ end
 -- Delayed loading and unresolved early capsules cannot starve the last fallback.
 reset({sceneAfter=7750,points={[1]={capsuleStatus=1},[2]={capsuleStatus=1},[3]={capsuleStatus=1}}})
 begin() unmoved() now=7750 tick(3) unmoved() now=7800 tick(3) landed(4)
+-- Even a scene loaded just before the search deadline gets its ground fallback.
+reset({sceneAfter=7950,capsuleStatus=1}) begin() now=7950 tick(3) unmoved()
+now=8000 tick(3) landed(1)
+assert(logs[#logs]:find('clearance=ground_fallback',1,true))
+-- The deadline bounds waiting; delayed scheduling cannot discard valid ground.
+reset({capsuleStatus=1}) begin() now=8050 tick(3) landed(1)
 for _,change in ipairs({{vehicle=true},{noCollision=true},{noGround=true},{obstruction=true},{sceneAfter=9000}}) do
     reset() begin() unmoved() scenario=change finish(3) unmoved() clean()
 end
 reset() begin() scenario={points={[1]={vehicle=true}}} finish(3) landed(2)
 reset() begin() scenario.delta=0.1 now=50 tick(3) unmoved() finish(3) landed(1,0.1)
-reset() begin() now=300 tick(3) unmoved() finish(3) landed(1)
+reset() begin() now=300 tick(3) landed(1)
+-- Fallback never bypasses fresh reliable checks after waiting on a capsule.
+for _,change in ipairs({{vehicle=true},{noCollision=true},{noGround=true},
+    {ground=89.620208740234},{steep=true},{ledge=true},{rayDelta=0.26},{sceneAfter=9000}}) do
+    reset({capsuleStatus=1}) begin() unmoved()
+    change.capsuleStatus=1 scenario=change finish(3) unmoved() clean()
+end
+-- A positive result still rejects even if the scheduler misses the probe budget.
+reset({obstruction=true}) begin() now=300 tick(3) unmoved() finish(3) unmoved() clean()
 
 for _,event in ipairs({'onClientResourceStop','QBCore:Client:OnPlayerUnload'}) do
     reset({noGround=true}) begin() handlers[event]('tarrant_medical') finish(3) unmoved() clean()
@@ -238,4 +276,4 @@ health=200 commands.medical_survey_here() unmoved(true) assert(logs[2]:find('ali
 reset({alive=true,noGround=true}) commands.medical_survey_hospital(0,{}) tick(3)
 handlers['QBCore:Client:OnPlayerUnload']() finish(3) unmoved(true) clean()
 print=originalPrint
-print('PASS: explicit hospital points, exact live road/canopy regressions, measured placement, roof/underground rejection, body/footprint/vehicle checks, fair timeout/retry, lifecycle and read-only diagnostics')
+print('PASS: explicit hospital points, live pending/invalid capsule fallback, confirmed obstruction rejection, road/canopy regressions, measured placement, fresh reliable checks, timeout/retry, lifecycle and read-only diagnostics')
