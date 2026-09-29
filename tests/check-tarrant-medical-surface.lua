@@ -9,7 +9,7 @@ dofile(root .. 'config.lua')
 local h = TarrantMedical.hospital
 local now, health, pressed, moves, resurrects, groundCalls
 local focus, scene, frozen, faded, logs, threads, handlers, scenario
-local position, target, commands, rayCalls, requests, focusTarget, collisionEnabled, lastRay, capsulePoint
+local position, target, commands, rayCalls, requests, focusTarget, collisionEnabled, lastRay, capsules, navCalls, probeHeights
 local function reset(options)
     commands = {}
     RegisterCommand = function(name, fn) commands[name] = fn end
@@ -20,7 +20,7 @@ local function reset(options)
     now, health, pressed, moves, resurrects, groundCalls = 0, 0, false, 0, 0, 0
     rayCalls, requests, focusTarget = 0, 0, nil
     collisionEnabled, lastRay = false, nil
-    capsulePoint = nil
+    capsules, navCalls, probeHeights = {}, 0, {}
     if scenario.alive then health = 200 end
     focus, scene, frozen, faded = false, false, false, false
     logs, threads, handlers = {}, {}, {}
@@ -62,31 +62,45 @@ local function reset(options)
     NewLoadSceneStartSphere = function() scene=not scenario.startFailed return scene end
     NewLoadSceneStop = function() assert(scene, 'must stop only the scene acquired by medical') scene=false end
     IsNewLoadSceneLoaded = function() return now >= (scenario.sceneAfter or 0) end
-    GetGroundZFor_3dCoord = function(x)
+    GetGroundZFor_3dCoord = function(x,_,z)
+        probeHeights[#probeHeights+1]=z
         groundCalls=groundCalls+1
         if scenario.noGround or (scenario.firstInvalid and x==h.x) then return false, 0 end
         if scenario.wrongGround or (scenario.transientGround and groundCalls<=2) then return true,h.z-10 end
+        if scenario.roofZ and z>scenario.roofZ then return true,scenario.roofZ end
         return true,scenario.groundZ or h.z
     end
+    GetClosestVehicleNode = function(x,y,_,flags,zWeight)
+        assert(flags==0 and zWeight==0.0, 'street discovery must rank nodes in XY, not against stale center Z')
+        return not scenario.noRoad, {x=x+(scenario.roadOffset or 0),y=y,z=scenario.roadZ or scenario.groundZ or h.z}
+    end
+    GetVehicleNodeProperties = function() return not scenario.noRoadProperties, 1, scenario.roadFlags or 0 end
     GetSafeCoordForPed = function(x,y,_,pavement,flags)
         assert(pavement and flags==15, 'require connected pavement, no interiors or water')
-        return not scenario.noPavement, {x=x+(scenario.snapX or 0),y=y,z=scenario.navZ or scenario.groundZ or h.z}
+        navCalls=navCalls+1
+        return not scenario.noPavement, {x=x+(scenario.snapX or 0),y=y+(scenario.snapY or 0),z=scenario.navZ or scenario.groundZ or h.z}
     end
     StartShapeTestCapsule = function(x,y,z,_,_,_,radius,mask,_,options)
         assert(radius==0.45 and mask==511 and options==4)
-        capsulePoint={x=x,y=y,z=z}
-        return 2
+        capsules[#capsules+1]={x=x,y=y,z=z}
+        return #capsules+100
     end
     StartExpensiveSynchronousShapeTestLosProbe = function(x,y,z,_,_,bottom)
         lastRay={x=x,y=y,z=z,bottom=bottom}
         rayCalls=rayCalls+1 return 1
     end
     GetShapeTestResult = function(handle)
-        if handle==2 then
+        if handle>=101 then
+            local capsulePoint=capsules[handle-100]
+            if scenario.onlyLastClears and not (capsulePoint.x==h.x and capsulePoint.y==h.y-24) then return 1 end
             return scenario.capsuleStatus or 2, scenario.obstruction or (scenario.firstObstructed and capsulePoint.x==h.x) or false
         end
+        if lastRay.z<lastRay.bottom then
+            return 2, scenario.covered or (scenario.firstCovered and lastRay.x==h.x) or false
+        end
         local ledge = scenario.ledge and lastRay.z-lastRay.bottom<2
-        return scenario.rayStatus or 2, not scenario.noCollision and not ledge, {x=lastRay.x,y=lastRay.y,z=(scenario.rayZ or scenario.groundZ or h.z)-(scenario.wrongRayHeight and 3 or 0)},
+        local surfaceZ = scenario.roofZ and lastRay.z>scenario.roofZ and scenario.roofZ or scenario.rayZ or scenario.groundZ or h.z
+        return scenario.rayStatus or 2, not scenario.noCollision and not ledge, {x=lastRay.x,y=lastRay.y,z=surfaceZ-(scenario.wrongRayHeight and 3 or 0)},
             {x=0,y=0,z=scenario.steep and 0.4 or 1}, 0
     end
     IsAnyVehicleNearPoint = function(x) return scenario.vehicle or (scenario.firstVehicle and x==h.x) or false end
@@ -120,8 +134,8 @@ local originalPrint = print
 reset({sceneAfter=200, transientGround=true}) begin() unchanged()
 now=200 tick(3) unchanged()
 assert(coroutine.status(threads[3])~='dead', 'wrong early ground must not end the loading window')
-now=250 tick(3) now=300 tick(3)
-assert(resurrects==1 and moves==0 and position.x==target.x+12 and position.y==target.y
+finish(3)
+assert(resurrects==1 and moves==0 and position.x~=1000
     and position.z==h.z+1.0 and health==200 and collisionEnabled and not focus and not scene and not frozen and not faded)
 
 for _,case in ipairs({
@@ -269,7 +283,7 @@ reset() begin() scenario.firstVehicle=true finish(3)
 assert(resurrects==1 and position.x==h.x+12 and logs[#logs]:find('accepted: index=2'))
 reset() begin() now=300 tick(3) unchanged()
 finish(3)
-assert(resurrects==1 and position.x==h.x+12, 'a capsule result received after its deadline cannot authorize candidate one')
+assert(resurrects==1, 'expired capsules must be rejected and freshly probed before recovery')
 
 for _,case in ipairs({
     {noGround=true, reason='ground_not_found'},
@@ -282,8 +296,8 @@ for _,case in ipairs({
     {noPavement=true, reason='pavement_unavailable'}, -- roofs/interiors/water/isolated polygons excluded by flags
     {snapX=100, reason='pavement_outside_search'},
     {navZ=h.z+5, reason='navmesh_ground_mismatch'},
-    {groundZ=h.z-60, reason='outside_probe_volume'},
-    {groundZ=h.z+60, reason='outside_probe_volume'},
+    {groundZ=h.z-60, roadZ=h.z, reason='road_grade_mismatch'},
+    {groundZ=h.z+60, roadZ=h.z, reason='road_grade_mismatch'},
     {groundZ=17, rayZ=43, reason='ground_collision_unavailable'}, -- covered/underground surface
 }) do
     reset(case) begin() unchanged() finish(3) unchanged()
@@ -315,5 +329,59 @@ handlers['QBCore:Client:OnPlayerUnload']()
 handlers['QBCore:Client:OnPlayerLoaded']()
 handlers['tarrant_medical:client:state']({remaining=15,pending=false})
 assert(health==0, 'a fresh character load must still enforce persisted death')
+
+-- Live-evidence regression A/B/D/I: 43.28 is only the search/streaming hint.
+-- These synthetic nav/road values explicitly complete the supplied surface
+-- evidence; the live report did not include Candidate 1's actual navmesh Z.
+local measured = 48.753879547119
+reset({groundZ=measured, rayZ=measured, roadZ=measured-0.15,
+    snapX=298.1172-h.x, snapY=-585.9902-h.y})
+begin() unchanged() finish(3)
+assert(resurrects==1 and position.x==298.1172 and position.y==-585.9902 and position.z==measured+1)
+assert(collisionEnabled and not frozen and not scene and not focus and not faded)
+for _,top in ipairs(probeHeights) do assert(math.abs(top-(measured+1))<0.001, 'probe candidate layer, never center+50') end
+assert(navCalls==#TarrantMedical.hospitalSearch.offsets, 'one pavement lookup per seed; do not demand a second lookup reproduce the point')
+for _,delta in ipairs({0.24,0.26}) do
+    reset({groundZ=measured,rayZ=measured+delta}) begin() finish(3)
+    if delta<0.25 then assert(resurrects==1) else unchanged() end
+end
+-- The previous second-lookup proximity assumption and six-metre seed radius
+-- are gone. Returned pavement is judged against the unchanged hospital XY bound.
+reset({groundZ=measured,snapX=10}) begin() finish(3)
+assert(resurrects==1 and position.x==h.x+10)
+reset({groundZ=measured,snapX=100}) begin() finish(3) unchanged()
+assert(logs[#logs]:find('pavement_outside_search'))
+
+-- A high roof cannot pass just by making nav/ground/ray agree. The independently
+-- resolved local street level and road type must support the candidate as well.
+reset({groundZ=89.620208740234,navZ=89.620208740234,roadZ=42.357627868652})
+begin() finish(3) unchanged()
+assert(logs[#logs]:find('road_grade_mismatch') and logs[#logs]:find('roadGroundDelta='))
+-- At stacked geometry, local probes reach pavement instead of the old topmost
+-- roof. Covered pavement still rejects; the next exposed candidate succeeds.
+reset({groundZ=42.357627868652,roofZ=48.753879547119,firstCovered=true})
+begin() unchanged() finish(3)
+assert(resurrects==1 and position.x==h.x+12 and position.z==43.357627868652)
+assert(logs[2]:find('covered_or_unloaded'))
+for _,case in ipairs({{noRoad=true}, {noRoadProperties=true}, {roadFlags=16}, {roadFlags=1024},
+    {roadFlags=64}, {roadFlags=1}, {roadFlags=8}, {roadOffset=100}, {covered=true}}) do
+    reset(case) begin() finish(3) unchanged()
+    assert(not collisionEnabled and not frozen and not faded and not scene and not focus)
+end
+
+-- Late scene loading + twelve stalled capsules must not starve candidate 13.
+reset({sceneAfter=7750,onlyLastClears=true}) begin() unchanged()
+now=7750 tick(3) unchanged()
+assert(#capsules==13, 'every candidate must get a clearance probe in the first loaded sweep')
+now=7800 tick(3)
+assert(resurrects==1 and position.x==h.x and position.y==h.y-24)
+assert(logs[#logs]:find('accepted: index=13') and now<TarrantMedical.collisionTimeoutMs)
+-- Fresh body/sky/street checks must still veto a previously valid candidate.
+for _,change in ipairs({{obstruction=true}, {covered=true}, {roadFlags=16}}) do
+    reset() begin() unchanged() scenario=change finish(3) unchanged()
+end
+reset() begin() scenario.groundZ=h.z+0.1 now=50 tick(3) unchanged()
+finish(3) assert(resurrects==1 and position.z==h.z+1.1, 'changed floor needs a fresh capsule before placement')
 print=originalPrint
 print('PASS: hospital first/fallback candidates, measured Z, pavement/ground/ray/slope/footprint/body rejection, bounded exhaustion/retry, lifecycle, collision and stale external-revive packets')
+print('PASS: live-height/XY regressions, layered roof rejection, road reference checks, fresh validation and candidate 13 after late streaming/stalled earlier probes')

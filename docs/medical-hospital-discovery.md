@@ -1,129 +1,139 @@
-# Bounded hospital pavement discovery
+# Hospital recovery: validate the pavement layer
 
-This replaces the single-point hospital path deployed from
-`4f88b50327b88b01368ef329c0cf33fabafd2f9d`. No VPS deployment was performed by the
-coding agent. Automated results are not live Enhanced acceptance.
+Current follow-up to live `e36bca6af242a2a6a25ded9f6a0a223733973edf`.
+No VPS deployment was performed by the coding agent. Automated tests are not live
+Enhanced acceptance. Manual coordinate surveying is not required for this flow.
 
-## Root cause
+## Precise diagnosis
 
-Normal recovery used one unaccepted XYZ position, `300.8,-585.6,43.28`, and could
-only succeed if ground was within 2 m of that configured Z. There was no alternate
-position. The observed `ground_z_mismatch` therefore rejected every E attempt
-before resurrection. Teleporting directly to that XYZ also caused falling/death.
-The exact Enhanced terrain/collision behavior behind the mismatch remains
-unproven, but this position is demonstrably unsuitable as an assumed spawn.
+Candidate 1 failed `abs(ground - h.z) > 1.0`, where `h.z` was the Z returned by
+`GetSafeCoordForPed`, **not** configured Z 43.28. Its supplied ground/ray
+48.753879547119 and normal 1 confirm one flat collision layer, not necessarily the
+returned pavement layer. The pasted evidence omits `navZ`, so the exact numerical
+delta and safety of that candidate cannot be established. Candidates 5 and 9
+reached the same predicate.
 
-Console recovery works at a validated local surface: resurrection, movement,
-death reconciliation and saving already work. This change replaces hospital
-destination selection, keeping the shared resurrection block.
+Both discovery and validation queried ground from `center.z + 50 = 93.28`, with a
+ray spanning the whole volume. That can select a roof/canopy above the pavement;
+both measurements can agree on the wrong layer. It also fed high surface heights
+into pavement lookup. The different 89.62, 48.75 and 42.2 readings are consistent
+with stacked geometry; the logs do not identify the exact structure at each height.
+Deleting navmesh agreement would allow flat roofs, so the probe layer is corrected.
 
-A separate client defect was found during external-revive review: cleanup erased
-the observed-death history. A subsequent delayed server death packet could then
-be mistaken for persisted death on a fresh login and kill the revived ped. The
-client now retains this history until unload/stop and ignores stale death states
-when the observed-dead character is already alive. Fresh login/restart still
-enforces persisted death; this does not grant a reconnect bypass.
+`pavement_outside_search` combined two **XY-only** comparisons: within 6 m of an
+arbitrary seed AND within 32 m of the hospital. Z was not involved. The seed limit
+could discard pavement inside the intended hospital area. A second pavement lookup
+also had to return within 0.75 m of the first. The native promises a safe nearby
+point, not repeated point identity. Candidate 13's `pavement_unavailable` after
+successful ground/ray checks could mean second-lookup failure, changed XY, or Z
+disagreement; its old reason did not distinguish those cases.
 
-## Exact strategy
+The original 2 m check belongs to console/exact-point validation: measured ground
+versus the sampled target Z. It is unchanged. Hospital ray/ground agreement stays
+0.25 m, and navmesh/ground agreement stays 1 m. No tolerance was increased.
 
-The old coordinate is now **only the center of a search volume**, never an
-automatically trusted spawn. No replacement safe coordinates are invented and no
-manual NoClip survey is required before an ordinary E request.
+All 13 seeds appeared in the live log, so that attempt does not prove starvation.
+But sequential capsule waits could consume 250 ms each after a slow scene load.
+The same eight-second deadline now polls outstanding probes fairly.
 
-1. Keep the corpse at its origin. Acquire a destination scene and render focus
-   covering the bounded search volume. An already-owned scene is not taken over.
-2. Try 13 ordered relative XY seeds: the center; four cardinal offsets at 12 m;
-   four diagonal offsets of 12 m per axis; four cardinal offsets at 24 m. Request
-   collision as each seed is examined. All seeds share the existing eight-second
-   timeout; cycle through them again for transient loading failures.
-3. Probe ground from the top of a volume extending 50 m above/below center Z.
-   Ask `GetSafeCoordForPed` for nearby **pavement, non-isolated, non-interior,
-   non-water** navmesh using flags `1|2|4|8` (15). Reject results more than 6 m
-   from their seed or more than 32 m horizontally from the hospital center.
-   These are documented [Cfx navmesh flags](https://github.com/citizenfx/natives/blob/master/PATHFIND/GetSafeCoordForPed.md).
-4. At that actual navmesh XY, query ground again and cast a world ray through the
-   full vertical search volume. Require ground/ray Z agreement within 0.25 m,
-   navmesh/ground agreement within 1 m, and surface normal Z at least 0.9. Require
-   a repeat pavement query within 0.75 m of the chosen XY. A roof/cover over a
-   lower ground hit causes top-ray disagreement; a roof/interior/water polygon
-   cannot be accepted simply because ground exists there.
-5. Probe four footprint edges 0.45 m from the center. All must have world ground
-   within 0.25 m and slope normal Z at least 0.9. Reject ledges/narrow surfaces and
-   vehicles within 2 m. Test a vertical capsule of radius 0.45 m, from ground+0.6
-   to ground+1.6, for collidable world, objects, peds and vehicles. Its async result
-   must complete without a hit within 250 ms and before the overall deadline.
-   The [trace flags](https://github.com/citizenfx/natives/blob/master/SHAPETEST/StartShapeTestLosProbe.md)
-   use all categories and ignore only non-collidable objects, not glass.
-6. After the capsule's final yield, recheck scene, pavement, ground/ray, footprint,
-   slope and nearby vehicles. Ground must remain within 0.05 m of the checked
-   capsule's floor. There is no further yield before placement. If anything
-   fails, leave the corpse untouched and proceed to the next candidate.
-7. Use the same resurrection block as console recovery, with the measured ground
-   plus the existing 1 m ped-origin offset and configured heading (70 degrees).
-   Enable collision, unfreeze only this successfully resurrected ped, clear
-   velocity, restore health/tasks/stamina/control and release owned streaming/fade.
+## Corrected strategy
 
-The 50 m vertical bound is a **search bound**, not permission to accept a height
-that disagrees with collision. The old two-metre local-surface tolerance remains
-unchanged for console recovery and explicit-point diagnostics. A hospital ground
-hit alone never authorizes resurrection: it must also be exposed, navmesh pavement,
-level across the footprint and free of collidable obstructions. Semantic pavement
-classification still depends on the live map's navmesh, and remote entity/collision
-availability depends on the engine; mocks cannot certify the physical location.
+1. Keep the **32 m hospital XY area** and the same 13 relative seeds. The old XYZ
+   is a search/streaming reference, never a certified spawn.
+2. Resolve the nearest vehicle-path node with zero vertical ranking weight. Reject
+   off-road, switched-off, tunnel/interior, highway and water nodes. Road references
+   must be within 32 m of their query and 64 m of the hospital; this does not enlarge
+   the permitted recovery area.
+3. Request pavement at that street height with pavement/non-isolated/non-interior/
+   non-water flags. Judge the returned XY against the hospital area, not the former
+   six-metre seed limit. Resolve a road reference at the actual pavement XY too.
+4. Query ground at **returned navmesh Z + 1 m**, casting down to navmesh Z - 2.5 m.
+   Require ground/ray agreement within 0.25 m, ground/navmesh within 1 m, and
+   ground/street reference within 2 m. The street comparison supplies independent
+   evidence against a roof; it does not compare against configured center Z.
+5. Require road type and slope checks, a clear upward world ray from ground+2.1
+   to ground+80, four supported footprint edges, standing-body capsule clearance,
+   and no vehicle within 2 m. Covered/tunnel pavement remains rejected. Validate
+   the initially returned point directly; do not ask another nearby-point lookup
+   to reproduce it.
+6. Request every seed's collision before waiting. After scene loading, start all
+   eligible clearance probes in one sweep and poll them without blocking on
+   earlier pending results. Each probe has 250 ms; the entire attempt has eight
+   seconds. Rejected seeds can retry after 100 ms. Late/unavailable streaming still
+   fails safely rather than extending the lease.
+7. Following a clear capsule result, freshly check ground/ray, road type/grade,
+   sky, slope, footprint and vehicles. The scene must be loaded; ground must stay
+   within 0.05 m of the capsule's checked floor. No further yield precedes placement.
+8. Use the existing shared resurrection block at measured ground+1 (the existing
+   ped-origin offset) with configured heading. Collision/unfreeze writes occur
+   only after validated resurrection. Failure leaves the corpse unmoved, releases
+   owned fade/streaming, preserves death, and permits E retry after lease expiry.
 
-If every candidate remains invalid, the resource fades back in, releases owned
-streaming state, leaves death/position intact and displays the existing retry
-message. The original 20-second exclusive request lease must expire before E can
-retry. Frozen, in-vehicle or collision-disabled peds are refused; medical does not
-take over NoClip/foreign freeze during failure, cleanup or external revive.
+Road references are safety evidence, not claimed safe spawns. Map classifications
+and collision availability still depend on the live engine. Missing or unsuitable
+references fail closed with explicit reasons. Both live acceptance tests remain
+necessary; no Enhanced-specific native bug is claimed proven.
 
-The server recognizes hospital arrivals within the same search volume instead of
-the old 5 m sphere. This preserves minimum hunger/thirst recovery for a valid
-fallback arrival. It is only arrival classification: server-observed health still
-controls death clearing and Qbox Save, including external revives. No client event
-can declare successful arrival. Countdown, E, inventory, cash/bank, employment,
-death persistence and duplicate-request protection remain unchanged.
+Native contracts:
+[road lookup and Z weighting](https://github.com/citizenfx/natives/blob/master/PATHFIND/GetClosestVehicleNode.md),
+[road flags](https://github.com/citizenfx/natives/blob/master/PATHFIND/GetVehicleNodeProperties.md),
+[pavement lookup](https://github.com/citizenfx/natives/blob/master/PATHFIND/GetSafeCoordForPed.md).
 
-Diagnostics log candidate index, seed/actual position, rejection reason and
-available ground/ray/navmesh evidence. Accepted candidates log their measured
-surface. Optional F8 `medical_survey_hospital` now runs the complete discovery
-without moving/reviving its alive observer. Four explicit arguments retain the
-old single-point diagnostic; neither form changes config or authorizes recovery.
+Server logic is unchanged: 30 seconds, explicit E, 20-second lease, death clearing,
+Qbox Save, recovery needs, and inventory/cash/bank retention. Its broad arrival
+envelope classifies hunger/thirst; it does not select the client destination or
+cause the reported navmesh rejection. Employment, reconnect/restart, console
+recovery and explicit-point diagnostics remain intact. Existing external-revive
+history protection remains tested, including death packets after confirmation.
 
-## Automated checks
+## One-attempt diagnostics
 
-Run from repository root:
+Keep the recovery start, candidate rejections, search summaries and final result
+from client F8. Candidate evidence includes:
 
-```text
-python tests/run-economy-lua.py
-git diff --check
-```
+- Native road result, flags and query distance, or the exact unavailable native.
+- Returned pavement XYZ and XY distances from the hospital and seed.
+- Probe endpoints, navmesh Z, street Z, ground, ray status/Z/normal, and all three
+  numerical height deltas used by the checks.
+- Sky coverage and capsule result/hit/age when reached.
+- A summary for each seed with attempt count, last failure evidence and scene-load
+  time; pending-at-deadline and never-loaded states are distinguished.
 
-The runner executes six suites, including all three medical suites. Coverage:
+Accepted candidates print actual XY, measured floor and final checks. Optional
+alive-observer `medical_survey_hospital` runs identical discovery without moving or
+reviving its observer. Four explicit arguments retain the strict point diagnostic.
+Neither mode changes config or is required for ordinary civilian recovery.
 
-- First candidate valid; first invalid or obstructed then second valid; a last-frame
-  vehicle obstruction falls through to the next candidate.
-- Measured ground Z different by more than 2 m from center Z is used only after
-  all pavement/collision/clearance checks pass.
-- Ground/ray failures, steep surfaces, missing pavement, out-of-bounds navmesh,
-  navmesh/ground mismatch, uncovered-footprint failure, covered/underground ground,
-  body obstruction and pending/invalid capsule results all reject safely.
-- Every seed visited on full failure within one timeout; no movement/resurrection,
-  no collision/unfreeze writes on failure; cleanup and subsequent E retry work.
-- Successful revival enables collision and unfreezes; foreign freeze/NoClip state
-  remains untouched on refusal, external revive, unload and stop.
-- Countdown/early rejection, duplicate requests, metadata/UI cleanup, Save once,
-  retained items/cash/bank, reconnect/restart and employment regression coverage.
-- External revive during preparation and delayed death packets after confirmation;
-  fresh login still enforces persisted death.
-- Fallback arrivals receive normal hunger/thirst and save behavior; external
-  revives outside the discovery volume clear death without hospital needs.
+## Regression coverage
+
+Run `python tests/run-economy-lua.py` and `git diff --check`. All six suites are
+required: employment server, world, medical server, medical client, medical surface,
+and employment client marker. Medical coverage includes:
+
+- Ground/ray 48.753879547119, center 43.28, XY 298.1172,-585.9902 accepted when
+  independent navmesh/street/clearance evidence supports that surface. Mock navmesh
+  and street heights complete missing live fields; this does not certify Candidate 1.
+- Ray/ground tolerance boundaries; high 89.620208740234 surface rejected against
+  street Z 42.357627868652 even when the high navmesh/ray/ground agree.
+- Local pavement queried below a roof; covered first candidate rejects and an
+  exposed later point succeeds.
+- Pavement more than 6 m from its seed accepted inside the unchanged hospital XY
+  bound; out-of-area pavement rejected; no repeat-lookup identity assumption.
+- Scene loads at 7750 ms, first 12 capsules remain pending, candidate 13 succeeds
+  at 7800 ms without extending the attempt or request lease.
+- Missing/forbidden road data, ground/ray failures, slope/footprint/coverage/body
+  failures, total exhaustion, fresh checks, expired probes, original-position
+  retention, retry and post-validation collision/unfreeze.
+- External revive cancellation and late packets, countdown, duplicate requests,
+  money/items, saving, UI cleanup, reconnect/restart and employment behavior.
+
+These are native mocks. Hospital recovery is not live PASS until both normal
+death -> 30 seconds -> E -> hospital -> alive/walking tests succeed.
 
 ## Backup-first deployment: operator only
 
-Deploy **all three changed runtime files together**. Server/config consistency is
-required for the search bounds and arrival-needs classification. No other runtime
-file, private config or database is modified. In VPS Bash as the runtime owner:
+From deployed e36bca6, **client.lua and config.lua are the only changed runtime
+files**. Keep its server.lua. In VPS Bash as the runtime owner:
 
 ```bash
 set -euo pipefail
@@ -132,10 +142,10 @@ cd /opt/randy-2
 git fetch origin main
 git merge-base --is-ancestor "$COMMIT" origin/main
 MEDICAL='/opt/randy-2/runtime/qbox-server-data/resources/[tarrant]/tarrant_medical'
-BACKUP="/opt/randy-2/runtime/medical-discovery-backup-$(date -u +%Y%m%dT%H%M%SZ)"
+BACKUP="/opt/randy-2/runtime/medical-layer-backup-$(date -u +%Y%m%dT%H%M%SZ)"
 umask 077
 mkdir -m 700 "$BACKUP"
-for f in client.lua server.lua config.lua; do
+for f in client.lua config.lua; do
   cp -p "$MEDICAL/$f" "$BACKUP/$f.before"
   git show "$COMMIT:resources/[tarrant]/tarrant_medical/$f" > "$BACKUP/$f.after"
   test -s "$BACKUP/$f.after"
@@ -146,51 +156,40 @@ printf 'Keep rollback directory: %s\n' "$BACKUP"
 In **txAdmin server console**: `stop tarrant_medical`. Then in the same Bash session:
 
 ```bash
-for f in client.lua server.lua config.lua; do
+for f in client.lua config.lua; do
   cat "$BACKUP/$f.after" > "$MEDICAL/$f"
   cmp -s "$MEDICAL/$f" "$BACKUP/$f.after"
 done
 ```
 
 In **txAdmin server console**: `ensure tarrant_medical`. No `refresh`, server-wide
-restart or reconnect is required to load these existing resource files. Restarting
-medical briefly interrupts its UI/requests; persistent death remains authoritative.
+restart, private configuration or database edit is needed.
 
-Rollback: `stop tarrant_medical`, then in the same Bash session:
+Rollback: stop medical, run the following in the same Bash session, then ensure it.
+The backup restores the known e36bca6 failure.
 
 ```bash
-for f in client.lua server.lua config.lua; do
+for f in client.lua config.lua; do
   test -s "$BACKUP/$f.before"
   cat "$BACKUP/$f.before" > "$MEDICAL/$f"
 done
 ```
 
-Then `ensure tarrant_medical`. The backup restores the known single-point failure.
+## Live acceptance: two real players/tests
 
-## Short live acceptance checklist
-
-1. Record Tester A's inventory/counts, cash and bank. With normal movement and no
-   admin assistance, die near the hospital. Confirm 30 seconds, early E denial,
-   then the Arlington Memorial E prompt. Press E repeatedly during preparation.
-2. Require exactly one recovery onto exterior hospital pavement, alive and walking.
-   Check no sky fall, underground/roof spawn, collision issue, death loop or stuck
-   recovery UI. Retain the accepted-candidate F8 line. Check items/cash/bank,
-   hunger/thirst and successful character save. Do not use rescue/heal/NoClip to
-   make this acceptance pass.
-3. Tester B repeats from a different distant location with the hospital initially
-   unstreamed. Require the same complete death -> 30 sec -> E -> hospital -> alive
-   -> walking flow. Inspect the chosen pavement on the actual Enhanced map.
-4. Reconnect after successful recovery and confirm the character stays alive with
-   retained items/money. Also confirm reconnect while dead retains countdown/death.
-5. In a controlled test, obstruct a previously chosen candidate with a parked
-   vehicle and repeat recovery. Require safe fallback to another validated point
-   or safe rejection at the original death position. On rejection, remove the
-   obstruction and retry after the original 20-second lease expires.
-6. In staging, test an existing legitimate external revive during preparation and
-   restart medical while dead/preparing: no extra teleport, re-kill, stuck fade or
-   unintended unfreeze. Confirm employment cancellation/payment behavior remains
-   unchanged. Keep the unrelated intermittent disconnect issue separate.
-
-Only mark hospital recovery PASS after both testers complete steps 1–3 on the
-live Enhanced server. If discovery fails, retain the per-candidate reasons and
-overall failure line; no manual-coordinate hunt is required to exercise this flow.
+1. Record items/counts, cash and bank. Tester A dies near the hospital, waits the
+   full 30 seconds, and presses E. Early E does nothing; repeated E cannot duplicate
+   recovery. Require hospital exterior -> alive -> normal walking.
+2. Tester B repeats from a distant location with Pillbox initially unstreamed.
+   Require the same complete flow; retain both accepted-candidate F8 lines.
+3. For both: no admin assistance, medical_recover_here, NoClip or Heal Myself; no
+   sky fall, underground/roof spawn, repeated death, stuck UI or disabled collision.
+   Verify items, cash/bank, intended needs and successful save.
+4. Reconnect afterward and verify alive state and retained assets. Separately check
+   reconnect/restart while dead cannot bypass persistent death/countdown.
+5. In staging, obstruct a candidate: require safe fallback or rejection without
+   moving the corpse, then retry after lease expiry. Test legitimate external
+   revive during preparation: no later re-kill, teleport or stale death UI.
+6. Mark hospital PASS only after steps 1-3 succeed for both tests. If anything
+   fails, preserve the complete one-attempt diagnostics above. The separate packet
+   timeout issue remains out of scope.

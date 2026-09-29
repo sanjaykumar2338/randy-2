@@ -39,6 +39,8 @@ DoScreenFadeIn = function() faded = false end
 RequestCollisionAtCoord = function() end
 SetEntityCoordsNoOffset = function() error('Do not move before validation') end
 GetGroundZFor_3dCoord = function() return groundOK, TarrantMedical.hospital.z end
+GetClosestVehicleNode = function(x,y) return true, {x=x,y=y,z=TarrantMedical.hospital.z} end
+GetVehicleNodeProperties = function() return true, 1, 0 end
 GetSafeCoordForPed = function(x,y,_,pavement,flags)
     assert(pavement and flags==15)
     return true, {x=x,y=y,z=TarrantMedical.hospital.z}
@@ -49,9 +51,9 @@ ClearFocus = function() end
 NewLoadSceneStartSphere = function() return true end
 NewLoadSceneStop = function() end
 IsNewLoadSceneLoaded = function() return groundOK end
-StartExpensiveSynchronousShapeTestLosProbe = function() return 1 end
+StartExpensiveSynchronousShapeTestLosProbe = function(_,_,top,_,_,bottom) return top<bottom and 3 or 1 end
 StartShapeTestCapsule = function() return 2 end
-GetShapeTestResult = function(handle) return 2, handle~=2, {z=TarrantMedical.hospital.z}, {z=1}, 0 end
+GetShapeTestResult = function(handle) return 2, handle==1, {z=TarrantMedical.hospital.z}, {z=1}, 0 end
 IsAnyVehicleNearPoint = function() return false end
 NetworkResurrectLocalPlayer = function() resurrects = resurrects+1 hp=200 end
 IsControlJustReleased = function() local value=pressed pressed=false return value end
