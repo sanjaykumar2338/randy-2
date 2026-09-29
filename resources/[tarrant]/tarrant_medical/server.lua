@@ -74,9 +74,12 @@ local function finish(src, session)
 end
 
 local function arrived(src)
-    local pos, h = GetEntityCoords(GetPlayerPed(src)), cfg.hospital
+    local pos, h, search = GetEntityCoords(GetPlayerPed(src)), cfg.hospital, cfg.hospitalSearch
+    -- Classify recovery needs inside the discovery volume. Observed native
+    -- health, not a client-reported arrival, still controls finish.
     return GetPlayerRoutingBucket(src) == 0
-        and (pos.x-h.x)^2 + (pos.y-h.y)^2 + (pos.z-h.z)^2 <= cfg.arrivalRadius^2
+        and (pos.x-h.x)^2 + (pos.y-h.y)^2 <= search.radius^2
+        and pos.z >= h.z-search.verticalRange and pos.z <= h.z+search.verticalRange+1.0
 end
 
 local function reconcile(src)

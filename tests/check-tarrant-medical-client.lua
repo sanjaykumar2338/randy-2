@@ -2,6 +2,8 @@ RegisterCommand = function() end
 SetEntityVelocity = function() end
 IsEntityPositionFrozen = function() return false end
 IsPedInAnyVehicle = function() return false end
+GetEntityCollisionDisabled = function() return false end
+SetEntityCollision = function(_, enabled) assert(enabled) end
 GetEntityHeading = function() return 70 end
 GetEntityCoords = function() return {x=1000,y=1000,z=50} end
 local root = 'resources/[tarrant]/tarrant_medical/'
@@ -37,6 +39,10 @@ DoScreenFadeIn = function() faded = false end
 RequestCollisionAtCoord = function() end
 SetEntityCoordsNoOffset = function() error('Do not move before validation') end
 GetGroundZFor_3dCoord = function() return groundOK, TarrantMedical.hospital.z end
+GetSafeCoordForPed = function(x,y,_,pavement,flags)
+    assert(pavement and flags==15)
+    return true, {x=x,y=y,z=TarrantMedical.hospital.z}
+end
 IsNewLoadSceneActive = function() return false end
 SetFocusPosAndVel = function() end
 ClearFocus = function() end
@@ -44,7 +50,8 @@ NewLoadSceneStartSphere = function() return true end
 NewLoadSceneStop = function() end
 IsNewLoadSceneLoaded = function() return groundOK end
 StartExpensiveSynchronousShapeTestLosProbe = function() return 1 end
-GetShapeTestResult = function() return 2, true, {z=TarrantMedical.hospital.z}, {z=1}, 0 end
+StartShapeTestCapsule = function() return 2 end
+GetShapeTestResult = function(handle) return 2, handle~=2, {z=TarrantMedical.hospital.z}, {z=1}, 0 end
 IsAnyVehicleNearPoint = function() return false end
 NetworkResurrectLocalPlayer = function() resurrects = resurrects+1 hp=200 end
 IsControlJustReleased = function() local value=pressed pressed=false return value end
@@ -70,7 +77,11 @@ hp=0 tick(2) assert(cancellations==2)
 hp=200 sync({remaining=20,pending=false})
 assert(hp==200, 'replication lag must not kill an externally revived player')
 sync(false) label=nil tick(2) assert(not label)
-sync({remaining=15,pending=false}) assert(hp==0)
+sync({remaining=15,pending=false}) label=nil tick(2)
+assert(hp==200 and not label, 'late death packet after confirmed external revive cannot restart UI or kill ped')
+handlers['QBCore:Client:OnPlayerUnload']()
+handlers['QBCore:Client:OnPlayerLoaded']()
+sync({remaining=15,pending=false}) assert(hp==0, 'fresh login must still enforce persisted death')
 hp=200 sync(false)
 source=1 sync({remaining=30,pending=false}) assert(hp==200)
 source=65535

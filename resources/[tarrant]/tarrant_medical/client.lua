@@ -13,11 +13,13 @@ local function releaseStreaming()
     if focusOwned then ClearFocus() focusOwned = false end
 end
 
-local function cleanup()
+local function cleanup(resetHistory)
     generation = generation + 1
     recovering, pending, remotePending, message = false, false, false, nil
     surveying = false
-    sawNativeDeath = false
+    -- Preserve observed death/revive history through finish: a delayed death
+    -- packet must not kill this already revived character again.
+    if resetHistory then sawNativeDeath = false end
     releaseStreaming()
     if moving then
         DoScreenFadeIn(250)
@@ -28,7 +30,7 @@ end
 local function enter()
     if recovering then return end
     recovering = true
-    sawNativeDeath = IsEntityDead(PlayerPedId())
+    sawNativeDeath = sawNativeDeath or IsEntityDead(PlayerPedId())
     deadline = GetGameTimer() + cfg.recoverySeconds * 1000
     TriggerEvent('tarrant_medical:client:death')
     exports.ox_inventory:closeInventory()
@@ -38,6 +40,10 @@ local function apply(state)
     if not loaded or not LocalPlayer.state.isLoggedIn or stopped then return end
     if not state then
         if not IsEntityDead(PlayerPedId()) and not surveying then cleanup() end
+        return
+    end
+    if sawNativeDeath and not IsEntityDead(PlayerPedId()) and not moving then
+        cleanup()
         return
     end
     enter()
@@ -113,6 +119,123 @@ local function prepareSurface(h, ped, ticket, abort)
     return ready, ground, reason, evidence
 end
 
+-- Center Z is only a probe-volume anchor. Require connected exterior pavement
+-- (navmesh flags 1|2|4|8), exposed world ground and a level standing footprint.
+local function hospitalSurface(h, ped)
+    local center, search = cfg.hospital, cfg.hospitalSearch
+    local top, bottom = center.z+search.verticalRange, center.z-search.verticalRange
+    local found, ground = GetGroundZFor_3dCoord(h.x, h.y, top, false)
+    local ray = StartExpensiveSynchronousShapeTestLosProbe(h.x, h.y, top, h.x, h.y, bottom, 1, ped, 4)
+    local status, hit, point, normal = GetShapeTestResult(ray)
+    local evidence = ('target=%.4f,%.4f; ground=%s; rayStatus=%s; rayZ=%s; normalZ=%s; navZ=%.4f')
+        :format(h.x, h.y, tostring(ground), tostring(status), status == 2 and hit and tostring(point.z) or 'none',
+            status == 2 and hit and tostring(normal.z) or 'none', h.z)
+    if not found then return false, ground, 'ground_not_found', evidence end
+    if ground < bottom or ground > top then return false, ground, 'outside_probe_volume', evidence end
+    if status ~= 2 or not hit or math.abs(point.z-ground) > 0.25 then
+        return false, ground, 'ground_collision_unavailable', evidence
+    end
+    if math.abs(ground-h.z) > 1.0 then return false, ground, 'navmesh_ground_mismatch', evidence end
+    if normal.z < 0.9 then return false, ground, 'surface_too_steep', evidence end
+    local safe, nav = GetSafeCoordForPed(h.x, h.y, ground+1.0, true, 15)
+    if not safe or (nav.x-h.x)^2+(nav.y-h.y)^2 > 0.75^2 or math.abs(nav.z-ground) > 1.0 then
+        return false, ground, 'pavement_unavailable', evidence
+    end
+    -- Reject ledges/narrow props even if the center ray hits ground.
+    for _, offset in ipairs({{0.45,0}, {-0.45,0}, {0,0.45}, {0,-0.45}}) do
+        local x, y = h.x+offset[1], h.y+offset[2]
+        local probe = StartExpensiveSynchronousShapeTestLosProbe(x, y, ground+0.5, x, y, ground-0.5, 1, ped, 4)
+        local result, edgeHit, edge, slope = GetShapeTestResult(probe)
+        if result ~= 2 or not edgeHit or math.abs(edge.z-ground) > 0.25 or slope.z < 0.9 then
+            return false, ground, 'unsafe_footprint', evidence
+        end
+    end
+    if IsAnyVehicleNearPoint(h.x, h.y, ground+1.0, 2.0) then
+        return false, ground, 'vehicle_at_spawn', evidence
+    end
+    return true, ground, 'validated', evidence
+end
+
+local function prepareHospital(ped, ticket, abort)
+    local center, search = cfg.hospital, cfg.hospitalSearch
+    local expires = GetGameTimer()+cfg.collisionTimeoutMs
+    local reason, evidence = 'scene_busy', 'ground=none; surface_not_queried'
+    local function cancelled()
+        return stopped or ticket ~= generation or abort()
+            or IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false)
+            or GetEntityCollisionDisabled(ped)
+    end
+    if IsNewLoadSceneActive() then return false, nil, nil, reason, evidence end
+    SetFocusPosAndVel(center.x, center.y, center.z, 0.0, 0.0, 0.0)
+    focusOwned = true
+    sceneOwned = NewLoadSceneStartSphere(center.x, center.y, center.z,
+        math.sqrt(search.radius^2+search.verticalRange^2)+10.0, 0)
+    if not sceneOwned then return false, nil, nil, 'scene_start_failed', evidence end
+    local index, reported = 1, {}
+    while GetGameTimer() < expires and not cancelled() do
+        local offset = search.offsets[index]
+        local x, y = center.x+offset[1], center.y+offset[2]
+        RequestCollisionAtCoord(x, y, center.z)
+        reason = 'scene_not_loaded'
+        if IsNewLoadSceneLoaded() then
+            local found, z = GetGroundZFor_3dCoord(x, y, center.z+search.verticalRange, false)
+            reason, evidence = 'ground_not_found', 'ground=' .. tostring(z)
+            if found then
+                local safe, nav = GetSafeCoordForPed(x, y, z+1.0, true, 15)
+                reason = 'pavement_unavailable'
+                if safe then
+                    reason = 'pavement_outside_search'
+                    if (nav.x-x)^2+(nav.y-y)^2 <= search.snapRadius^2
+                        and (nav.x-center.x)^2+(nav.y-center.y)^2 <= search.radius^2 then
+                        local h = { x=nav.x, y=nav.y, z=nav.z, heading=center.heading }
+                        RequestCollisionAtCoord(h.x, h.y, h.z)
+                        local ready, ground
+                        ready, ground, reason, evidence = hospitalSurface(h, ped)
+                        if ready then
+                            -- Full standing body clearance, including props/peds/vehicles.
+                            -- The async capsule is bounded by both probe and attempt time.
+                            local capsule = StartShapeTestCapsule(h.x, h.y, ground+0.6,
+                                h.x, h.y, ground+1.6, 0.45, 511, ped, 4)
+                            local result, blocked
+                            local probeExpires = math.min(expires, GetGameTimer()+250)
+                            repeat
+                                Wait(0)
+                                if cancelled() or GetGameTimer() >= expires then break end
+                                result, blocked = GetShapeTestResult(capsule)
+                            until result ~= 1 or GetGameTimer() >= probeExpires
+                            reason = 'body_clearance_unavailable'
+                            if result == 2 and not blocked and not cancelled()
+                                and GetGameTimer() <= probeExpires and GetGameTimer() < expires then
+                                reason = 'scene_not_loaded'
+                                if IsNewLoadSceneLoaded() then
+                                    -- No yield between these final checks and resurrection.
+                                    local finalGround
+                                    ready, finalGround, reason, evidence = hospitalSurface(h, ped)
+                                    if ready and math.abs(finalGround-ground) <= 0.05 and GetGameTimer() < expires then
+                                        print(('[tarrant_medical] Hospital candidate accepted: index=%d; target=%.4f,%.4f,%.4f; %s')
+                                            :format(index, h.x, h.y, finalGround, evidence))
+                                        return true, h, finalGround, 'validated', evidence
+                                    end
+                                    if ready then reason = 'surface_changed' end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            if reported[index] ~= reason then
+                print(('[tarrant_medical] Hospital candidate rejected: index=%d; seed=%.4f,%.4f; reason=%s; %s')
+                    :format(index, x, y, reason, evidence))
+                reported[index] = reason
+            end
+            index = index % #search.offsets + 1
+        end
+        if not cancelled() and GetGameTimer() < expires then Wait(50) end
+    end
+    if cancelled() then reason = 'cancelled' end
+    return false, nil, nil, reason, evidence
+end
+
 local function relocate(ticket, here)
     if stopped or ticket ~= generation or not loaded then return end
     local ped = PlayerPedId()
@@ -122,8 +245,8 @@ local function relocate(ticket, here)
     local mode = here and 'recover_here' or 'hospital'
     print(('[tarrant_medical] Recovery start: mode=%s; ped=%.4f,%.4f,%.4f; target=%.4f,%.4f,%.4f')
         :format(mode, pos.x, pos.y, pos.z, h.x, h.y, h.z))
-    if IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false) then
-        print(('[tarrant_medical] Recovery refused: mode=%s; ped_frozen_or_in_vehicle'):format(mode))
+    if IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false) or GetEntityCollisionDisabled(ped) then
+        print(('[tarrant_medical] Recovery refused: mode=%s; ped_frozen_vehicle_or_collision_disabled'):format(mode))
         message = 'Recovery refused: disable NoClip/freeze and leave the vehicle first.'
         return
     end
@@ -139,19 +262,29 @@ local function relocate(ticket, here)
         -- status response cannot mistake this revived ped for a fresh login.
         message = 'Revived. Confirming recovery...'
     end
-    local ready, ground, reason, evidence = prepareSurface(h, ped, ticket, function()
+    local function abort()
         return not IsEntityDead(ped) or PlayerPedId() ~= ped
-    end)
+    end
+    local ready, ground, reason, evidence
+    if here then
+        ready, ground, reason, evidence = prepareSurface(h, ped, ticket, abort)
+    else
+        local destination
+        ready, destination, ground, reason, evidence = prepareHospital(ped, ticket, abort)
+        if destination then h = destination end
+    end
     if stopped or ticket ~= generation then return end
     if not IsEntityDead(ped) then externalRevive() return end
     local current = GetEntityCoords(ped)
-    if PlayerPedId() ~= ped or IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false)
+    if PlayerPedId() ~= ped or IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false) or GetEntityCollisionDisabled(ped)
         or (here and ((current.x-h.x)^2 + (current.y-h.y)^2 + (current.z-h.z)^2 > 0.25)) then
         ready, reason = false, 'ped_moved_or_frozen'
     end
     if ready then
         NetworkResurrectLocalPlayer(h.x, h.y, ground + 1.0, h.heading, false, false)
         ped = PlayerPedId()
+        SetEntityCollision(ped, true, true)
+        FreezeEntityPosition(ped, false)
         SetEntityVelocity(ped, 0.0, 0.0, 0.0)
         SetEntityHealth(ped, GetEntityMaxHealth(ped))
         ClearPedTasksImmediately(ped)
@@ -241,12 +374,12 @@ end)
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function() loaded = true end)
 RegisterNetEvent('QBCore:Client:OnPlayerUnload', function()
     loaded = false
-    cleanup()
+    cleanup(true)
 end)
 AddEventHandler('onClientResourceStop', function(resource)
     if resource ~= GetCurrentResourceName() then return end
     stopped = true
-    cleanup()
+    cleanup(true)
 end)
 
 -- Read-only local diagnostics. Never authorize a recovery or change player state.
@@ -279,8 +412,8 @@ RegisterCommand('medical_survey_here', function()
             tostring(not dead and not frozen and not vehicle and collision and agrees and not blocked)))
 end, false)
 
--- F8: validate the configured hospital, or an explicitly measured candidate,
--- through the exact remote streaming path. Arguments NEVER alter cfg.hospital
+-- F8: discover hospital pavement, or validate an explicitly measured point.
+-- Arguments NEVER alter cfg.hospital
 -- or authorize a recovery. Use from an alive observer away from the destination.
 RegisterCommand('medical_survey_hospital', function(_, args)
     if stopped or not loaded or not LocalPlayer.state.isLoggedIn or moving or pending
@@ -311,14 +444,22 @@ RegisterCommand('medical_survey_hospital', function(_, args)
         local function abort()
             return not loaded or not LocalPlayer.state.isLoggedIn or PlayerPedId() ~= ped or IsEntityDead(ped)
         end
-        local ready, _, reason, evidence = prepareSurface(h, ped, ticket, abort)
+        local ready, reason, evidence
+        if #args == 0 then
+            local destination, ground
+            ready, destination, ground, reason, evidence = prepareHospital(ped, ticket, abort)
+            if destination then h = destination h.z = ground end
+        else
+            local ground
+            ready, ground, reason, evidence = prepareSurface(h, ped, ticket, abort)
+        end
         if stopped or ticket ~= generation then return end
         if abort() or IsEntityPositionFrozen(ped) or IsPedInAnyVehicle(ped, false) then
             ready, reason = false, 'observer_state_changed'
         end
         releaseStreaming()
         surveying = false
-        print(('[tarrant_medical] Hospital survey: target=%.4f,%.4f,%.4f; heading=%.4f; remoteGeometryValid=%s; reason=%s; %s (read-only; requires local alive survey and visual exterior inspection; config unchanged)')
+        print(('[tarrant_medical] Hospital survey: target=%.4f,%.4f,%.4f; heading=%.4f; remoteGeometryValid=%s; reason=%s; %s (read-only; config unchanged; live E recovery still requires acceptance)')
             :format(h.x, h.y, h.z, h.heading, tostring(ready), reason, evidence))
     end)
 end, false)

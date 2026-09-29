@@ -1,5 +1,9 @@
 # Hospital recovery: code ready, exterior coordinate still unaccepted
 
+> Historical single-point diagnosis. Current runtime discovery, deployment and
+> acceptance: [medical-hospital-discovery.md](medical-hospital-discovery.md).
+> Manual coordinate surveying is no longer a prerequisite for E recovery.
+
 This is the current follow-up to live commit
 `47e546e4299d2d4660f6b216306b026e3f07e9c4`. It supersedes the deployment and
 coordinate-survey instructions in the earlier medical documents.

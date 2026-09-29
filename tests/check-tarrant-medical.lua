@@ -106,3 +106,24 @@ commands.medical_recover_here(0, {'1'})
 hp=200 pos={x=1000,y=1000,z=50}
 assert(not call('status') and not metadata.tarrantRecovery and metadata.hunger==25)
 print('PASS: console-only rescue, duplicate/expiry, persistence on rejection and completion away from hospital')
+
+-- Discovered hospital pavement may be outside the old five-metre arrival sphere
+-- and at a different measured Z. It must still receive normal recovery needs.
+hp=0 now=600 assert(call('status')) now=630 assert(call('request'))
+metadata.hunger=0 metadata.thirst=0
+pos={x=TarrantMedical.hospital.x+24,y=TarrantMedical.hospital.y,z=32.25}
+hp=200 local beforeSave=saved assert(not call('status'))
+assert(metadata.hunger==25 and metadata.thirst==50 and saved==beforeSave+1)
+assert(not metadata.isdead and not metadata.tarrantRecovery and not state.medicalRecovery)
+assert(data.money.cash==90 and data.money.bank==1000 and data.items[1]=='phone')
+-- External revives outside the discovery volume still finish, without granting
+-- hospital needs. This is classification, never client-authorized death clearing.
+for _,outside in ipairs({
+    {x=TarrantMedical.hospital.x+33,y=TarrantMedical.hospital.y,z=32.25},
+    {x=TarrantMedical.hospital.x,y=TarrantMedical.hospital.y,z=TarrantMedical.hospital.z+52},
+}) do
+    hp=0 now=now+100 assert(call('status')) now=now+30 assert(call('request'))
+    pos=outside metadata.hunger=0 metadata.thirst=0 hp=200
+    assert(not call('status') and metadata.hunger==0 and metadata.thirst==0)
+end
+print('PASS: discovered-area arrivals preserve recovery needs/save/retention; external revives outside the volume remain distinct')

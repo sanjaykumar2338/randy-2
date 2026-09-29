@@ -1,10 +1,10 @@
 # Civilian recovery and Employment Center delivery
 
-**Current follow-up:** two players reproduce hospital surface rejection; console
-local recovery works. The hospital coordinate remains unaccepted. Use the current
-diagnosis, survey, targeted deployment and acceptance instructions in
-[medical-hospital-recovery.md](medical-hospital-recovery.md), not the historical
-initial-install instructions below. Normal E recovery still needs live acceptance.
+**Current follow-up:** hospital recovery now discovers and validates nearby
+exterior pavement at runtime; the old coordinate is only a search center. Use
+[medical-hospital-discovery.md](medical-hospital-discovery.md) for the current
+strategy, three-file deployment and acceptance steps. The historical single-point
+description below is superseded. Normal E recovery still needs live acceptance.
 
 This is a staging candidate, not a claim of live Enhanced b156 acceptance.
 No deployment, private configuration changes, database operations, artifact
