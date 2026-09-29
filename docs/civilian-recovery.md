@@ -1,9 +1,9 @@
 # Civilian recovery and Employment Center delivery
 
-**Current follow-up:** hospital recovery now discovers and validates nearby
-exterior pavement at runtime; the old coordinate is only a search center. Use
+**Current follow-up:** hospital recovery validates an explicit list of exterior
+candidates from live evidence; road/navmesh discovery is removed. Use
 [medical-hospital-discovery.md](medical-hospital-discovery.md) for the current
-strategy, three-file deployment and acceptance steps. The historical single-point
+strategy, two-file deployment and acceptance steps. The historical single-point
 description below is superseded. Normal E recovery still needs live acceptance.
 
 This is a staging candidate, not a claim of live Enhanced b156 acceptance.

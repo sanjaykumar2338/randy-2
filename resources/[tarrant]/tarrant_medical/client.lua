@@ -119,71 +119,29 @@ local function prepareSurface(h, ped, ticket, abort)
     return ready, ground, reason, evidence
 end
 
--- Resolve road references in XY only. Exclude switched-off, off-road, tunnel,
--- highway and water nodes; no configured Z or high roof probe ranks the result.
-local forbiddenRoadFlags = 1 | 8 | 16 | 64 | 1024
-local function hospitalRoad(x, y)
-    local center, search = cfg.hospital, cfg.hospitalSearch
-    local found, road = GetClosestVehicleNode(x, y, 0.0, 0, 0.0, 0.0)
-    if not found then return nil, 'road_unavailable', 'native=GetClosestVehicleNode; road=none' end
-    local ok, _, flags = GetVehicleNodeProperties(road.x, road.y, road.z)
-    local distance = math.sqrt((road.x-x)^2+(road.y-y)^2)
-    local evidence = ('road=%.4f,%.4f,%.4f; roadXY=%.4f; roadFlags=%s')
-        :format(road.x, road.y, road.z, distance, tostring(flags))
-    if not ok or (flags & forbiddenRoadFlags) ~= 0 then return nil, 'road_type_rejected', evidence end
-    if distance > search.maxRoadDistance
-        or (road.x-center.x)^2+(road.y-center.y)^2 > search.roadRadius^2 then
-        return nil, 'road_outside_search', evidence
-    end
-    return road, nil, evidence
-end
-
-local function hospitalCandidate(x, y)
-    local road, reason, evidence = hospitalRoad(x, y)
-    if not road then return nil, reason, evidence end
-    -- Road-level input avoids selecting the roof before even asking for pavement.
-    local found, nav = GetSafeCoordForPed(x, y, road.z+1.0, true, 15)
-    if not found then return nil, 'pavement_unavailable', evidence .. '; native=GetSafeCoordForPed; nav=none' end
-    local distance = math.sqrt((nav.x-cfg.hospital.x)^2+(nav.y-cfg.hospital.y)^2)
-    evidence = evidence .. ('; nav=%.4f,%.4f,%.4f; hospitalXY=%.4f; seedXY=%.4f')
-        :format(nav.x, nav.y, nav.z, distance, math.sqrt((nav.x-x)^2+(nav.y-y)^2))
-    if distance > cfg.hospitalSearch.radius then return nil, 'pavement_outside_search', evidence end
-    -- Re-anchor at the returned XY, not the seed. The navmesh result itself is
-    -- the candidate; a second safe-coordinate lookup need not return that point.
-    local actualRoad, roadReason, roadEvidence = hospitalRoad(nav.x, nav.y)
-    if not actualRoad then return nil, roadReason, evidence .. '; actual_' .. roadEvidence end
-    return { x=nav.x, y=nav.y, z=nav.z, heading=cfg.hospital.heading, road=actualRoad }, nil, evidence
-end
-
+-- Authored candidates carry floor hints from the supplied live measurements.
+-- Road/navmesh searches and open-sky tests are not recovery prerequisites.
 local function hospitalSurface(h, ped)
-    -- Probe the candidate's own navmesh layer, never the top of the whole area.
+    -- A narrow local probe cannot pick the hospital roof from a high query.
+    -- The hint bounds acceptable floor height; placement always uses ground.
     local top, bottom = h.z+1.0, h.z-2.5
     local found, ground = GetGroundZFor_3dCoord(h.x, h.y, top, false)
     local ray = StartExpensiveSynchronousShapeTestLosProbe(h.x, h.y, top, h.x, h.y, bottom, 1, ped, 4)
     local status, hit, point, normal = GetShapeTestResult(ray)
     local rayFound = status == 2 and hit
-    local evidence = ('target=%.4f,%.4f; probe=%.4f:%.4f; navZ=%.4f; roadZ=%.4f; ground=%s; rayStatus=%s; rayZ=%s; normalZ=%s; navGroundDelta=%s; roadGroundDelta=%s; rayGroundDelta=%s')
-        :format(h.x, h.y, top, bottom, h.z, h.road.z, tostring(ground), tostring(status),
+    local evidence = ('target=%.4f,%.4f; probe=%.4f:%.4f; floorHint=%.4f; ground=%s; rayStatus=%s; rayZ=%s; normalZ=%s; floorDelta=%s; rayGroundDelta=%s')
+        :format(h.x, h.y, top, bottom, h.z, tostring(ground), tostring(status),
             rayFound and tostring(point.z) or 'none', rayFound and tostring(normal.z) or 'none',
             found and tostring(math.abs(ground-h.z)) or 'none',
-            found and tostring(math.abs(ground-h.road.z)) or 'none',
             found and rayFound and tostring(math.abs(point.z-ground)) or 'none')
     if not found then return false, ground, 'ground_not_found', evidence end
     if not rayFound or math.abs(point.z-ground) > 0.25 then
         return false, ground, 'ground_collision_unavailable', evidence
     end
-    if math.abs(ground-h.z) > 1.0 then return false, ground, 'navmesh_ground_mismatch', evidence end
-    -- Independent street-level evidence rejects a roof even if ray/navmesh agree.
-    if math.abs(ground-h.road.z) > 2.0 then return false, ground, 'road_grade_mismatch', evidence end
-    local roadOK, _, roadFlags = GetVehicleNodeProperties(h.road.x, h.road.y, h.road.z)
-    if not roadOK or (roadFlags & forbiddenRoadFlags) ~= 0 then return false, ground, 'road_type_rejected', evidence end
+    if math.abs(ground-h.z) > 2.0 then return false, ground, 'floor_height_mismatch', evidence end
     if normal.z < 0.9 then return false, ground, 'surface_too_steep', evidence end
-    -- Do not accept pavement under a roof/tunnel merely because the lower layer
-    -- is flat. This query is independent of the local downward ground query.
-    local sky = StartExpensiveSynchronousShapeTestLosProbe(h.x, h.y, ground+2.1, h.x, h.y, ground+80.0, 1, ped, 4)
-    local skyStatus, covered = GetShapeTestResult(sky)
-    evidence = evidence .. ('; skyStatus=%s; covered=%s'):format(tostring(skyStatus), tostring(covered))
-    if skyStatus ~= 2 or covered then return false, ground, 'covered_or_unloaded', evidence end
+    -- A distant canopy is not an obstruction. The standing-body capsule below
+    -- checks actual head/body clearance, including low ceilings and objects.
     for _, offset in ipairs({{0.45,0}, {-0.45,0}, {0,0.45}, {0,-0.45}}) do
         local x, y = h.x+offset[1], h.y+offset[2]
         local probe = StartExpensiveSynchronousShapeTestLosProbe(x, y, ground+0.5, x, y, ground-0.5, 1, ped, 4)
@@ -209,7 +167,7 @@ local function prepareHospital(ped, ticket, abort)
     SetFocusPosAndVel(center.x, center.y, center.z, 0.0, 0.0, 0.0)
     focusOwned = true
     sceneOwned = NewLoadSceneStartSphere(center.x, center.y, center.z,
-        math.sqrt(search.roadRadius^2+search.verticalRange^2)+10.0, 0)
+        math.sqrt(search.radius^2+search.verticalRange^2)+10.0, 0)
     if not sceneOwned then return false, nil, nil, 'scene_start_failed', evidence end
     local jobs, attempts, reported, retryAt, lastEvidence = {}, {}, {}, {}, {}
     local loadedAt
@@ -217,19 +175,19 @@ local function prepareHospital(ped, ticket, abort)
         reason, evidence = why, details
         jobs[index], retryAt[index], lastEvidence[index] = nil, GetGameTimer()+100, details
         if reported[index] ~= why then
-            local offset = search.offsets[index]
-            print(('[tarrant_medical] Hospital candidate rejected: index=%d; seed=%.4f,%.4f; reason=%s; %s')
-                :format(index, center.x+offset[1], center.y+offset[2], why, details))
+            local candidate = search.candidates[index]
+            print(('[tarrant_medical] Hospital candidate rejected: index=%d; candidate=%s; point=%.4f,%.4f; reason=%s; %s')
+                :format(index, candidate.name, candidate.x, candidate.y, why, details))
         end
         reported[index] = why
     end
-    -- Queue every seed's collision before waiting. Capsule jobs are polled round
+    -- Queue every candidate's collision before waiting. Capsule jobs are polled round
     -- robin: an early pending test never consumes later candidates' time budget.
-    for _, offset in ipairs(search.offsets) do RequestCollisionAtCoord(center.x+offset[1], center.y+offset[2], center.z) end
+    for _, candidate in ipairs(search.candidates) do RequestCollisionAtCoord(candidate.x, candidate.y, candidate.z) end
     while GetGameTimer() < expires and not cancelled() do
         if IsNewLoadSceneLoaded() then
             loadedAt = loadedAt or GetGameTimer()
-            for index, offset in ipairs(search.offsets) do
+            for index, candidate in ipairs(search.candidates) do
                 if cancelled() or GetGameTimer() >= expires then break end
                 local job = jobs[index]
                 if job then
@@ -240,7 +198,7 @@ local function prepareHospital(ped, ticket, abort)
                     if GetGameTimer() > job.expires or result == 0 or (result == 2 and blocked) then
                         reject(index, 'body_clearance_unavailable', details)
                     elseif result == 2 then
-                        -- Fresh collision, sky, slope, footprint, road and vehicles
+                        -- Fresh local collision, slope, footprint and vehicles
                         -- after the clearance result, without another yield.
                         local ready, ground, why, fresh = hospitalSurface(job.h, ped)
                         if ready and math.abs(ground-job.ground) <= 0.05 and GetGameTimer() < expires then
@@ -252,25 +210,22 @@ local function prepareHospital(ped, ticket, abort)
                     end
                 elseif GetGameTimer() >= (retryAt[index] or 0) then
                     attempts[index] = (attempts[index] or 0)+1
-                    local h, why, details = hospitalCandidate(center.x+offset[1], center.y+offset[2])
-                    if h then
-                        RequestCollisionAtCoord(h.x, h.y, h.z)
-                        local ready, ground, surfaceReason, surfaceEvidence = hospitalSurface(h, ped)
-                        details = details .. '; ' .. surfaceEvidence
-                        if ready then
-                            lastEvidence[index] = details .. '; capsuleStatus=queued'
-                            jobs[index] = { h=h, ground=ground, evidence=details, started=GetGameTimer(),
-                                expires=math.min(expires, GetGameTimer()+250),
-                                probe=StartShapeTestCapsule(h.x, h.y, ground+0.6, h.x, h.y, ground+1.6, 0.45, 511, ped, 4) }
-                        else reject(index, surfaceReason, details) end
-                    else reject(index, why, details) end
+                    local h = { x=candidate.x, y=candidate.y, z=candidate.z, heading=candidate.heading }
+                    RequestCollisionAtCoord(h.x, h.y, h.z)
+                    local ready, ground, surfaceReason, details = hospitalSurface(h, ped)
+                    if ready then
+                        lastEvidence[index] = details .. '; capsuleStatus=queued'
+                        jobs[index] = { h=h, ground=ground, evidence=details, started=GetGameTimer(),
+                            expires=math.min(expires, GetGameTimer()+250),
+                            probe=StartShapeTestCapsule(h.x, h.y, ground+0.6, h.x, h.y, ground+1.6, 0.45, 511, ped, 4) }
+                    else reject(index, surfaceReason, details) end
                 end
             end
         else reason = 'scene_not_loaded' end
         if GetGameTimer() < expires and not cancelled() then Wait(50) end
     end
     if cancelled() then reason = 'cancelled' end
-    for index in ipairs(search.offsets) do
+    for index in ipairs(search.candidates) do
         print(('[tarrant_medical] Hospital search summary: index=%d; attempts=%d; reason=%s; sceneLoadedAtMs=%s; %s')
             :format(index, attempts[index] or 0, jobs[index] and 'clearance_pending_at_end' or reported[index] or reason,
                 loadedAt and tostring(loadedAt-started) or 'never', lastEvidence[index] or 'ground=none'))
@@ -454,7 +409,7 @@ RegisterCommand('medical_survey_here', function()
             tostring(not dead and not frozen and not vehicle and collision and agrees and not blocked)))
 end, false)
 
--- F8: discover hospital pavement, or validate an explicitly measured point.
+-- F8: test the hospital candidate list, or validate an explicitly measured point.
 -- Arguments NEVER alter cfg.hospital
 -- or authorize a recovery. Use from an alive observer away from the destination.
 RegisterCommand('medical_survey_hospital', function(_, args)

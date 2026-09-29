@@ -119,7 +119,7 @@ assert(data.money.cash==90 and data.money.bank==1000 and data.items[1]=='phone')
 -- External revives outside the discovery volume still finish, without granting
 -- hospital needs. This is classification, never client-authorized death clearing.
 for _,outside in ipairs({
-    {x=TarrantMedical.hospital.x+33,y=TarrantMedical.hospital.y,z=32.25},
+    {x=TarrantMedical.hospital.x+TarrantMedical.hospitalSearch.radius+1,y=TarrantMedical.hospital.y,z=32.25},
     {x=TarrantMedical.hospital.x,y=TarrantMedical.hospital.y,z=TarrantMedical.hospital.z+52},
 }) do
     hp=0 now=now+100 assert(call('status')) now=now+30 assert(call('request'))
@@ -127,3 +127,16 @@ for _,outside in ipairs({
     assert(not call('status') and metadata.hunger==0 and metadata.thirst==0)
 end
 print('PASS: discovered-area arrivals preserve recovery needs/save/retention; external revives outside the volume remain distinct')
+
+-- Every explicit fallback must be classified as a hospital arrival for needs
+-- and Save; the larger envelope is not authority to bypass client validation.
+for _,candidate in ipairs(TarrantMedical.hospitalSearch.candidates) do
+    hp=0 now=now+100 assert(call('status')) now=now+30 assert(call('request'))
+    metadata.hunger=0 metadata.thirst=0
+    pos={x=candidate.x,y=candidate.y,z=candidate.z+1} hp=200
+    local previousSave=saved
+    assert(not call('status') and saved==previousSave+1)
+    assert(metadata.hunger==25 and metadata.thirst==50 and not metadata.isdead)
+    assert(data.money.cash==90 and data.money.bank==1000 and data.items[1]=='phone')
+end
+print('PASS: all explicit hospital candidates retain recovery needs, save and assets')
