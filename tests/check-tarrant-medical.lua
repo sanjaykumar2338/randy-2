@@ -57,6 +57,8 @@ assert(not state.dead and not state.isDead and not state.medicalRecovery)
 assert(state.canUseWeapons == false, 'do not unlock unrelated weapon restriction')
 assert(metadata.hunger == 25 and metadata.thirst == 50)
 assert(saved == 1 and data.money.cash == 90 and data.money.bank == 1000 and data.items[1] == 'phone')
+for _=1,10 do assert(not call('request') and not call('status')) end
+assert(saved == 1, 'duplicate requests/status polls must not save or finish recovery twice')
 -- External resurrection clears UI/state without waiting for countdown.
 hp = 0 now = 200 assert(call('status').remaining == 30)
 hp = 200 assert(not call('status') and not metadata.isdead)
@@ -74,7 +76,10 @@ start()
 assert(call('status').remaining == 20)
 now = 330 assert(call('request'))
 -- Failed relocation times out and allows retry, never pays or clears death.
+local savedBeforeFailure = saved
 now = 351 assert(not call('status').pending and metadata.isdead)
+assert(saved == savedBeforeFailure and state.dead and state.isDead and state.medicalRecovery,
+    'failed destination validation must not clear death or save a successful recovery')
 assert(call('request'))
 start()
 assert(not call('status').pending and call('request'), 'restart safely retries unfinished recovery')

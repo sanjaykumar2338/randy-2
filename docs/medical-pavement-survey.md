@@ -1,5 +1,8 @@
 # Pavement survey after fce08aa live rejection
 
+> Historical notes. Current diagnosis, remote candidate validation, deployment
+> and acceptance steps: [medical-hospital-recovery.md](medical-hospital-recovery.md).
+
 ## Evidence and diagnosis
 
 The operator deployed only medical client/server from
