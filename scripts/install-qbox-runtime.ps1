@@ -385,6 +385,7 @@ exec ox.cfg
 
 ensure mapmanager
 ensure chat
+ensure tarrant_chat
 ensure spawnmanager
 ensure sessionmanager
 stop basic-gamemode

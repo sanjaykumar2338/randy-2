@@ -1,0 +1,5 @@
+/* Do not change the stock hidden/animated classes or saved visibility mode. */
+html.tarrant-chat-cancelled .chat-window {
+  opacity: 0 !important;
+  transition: none !important;
+}
