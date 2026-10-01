@@ -16,24 +16,28 @@ printf '%s\n' 'SERVER_NAME=Tarrant County RP - Staging' 'DB_PASSWORD=not-a-real-
 [ "$(dotenv_get "$ENV_FIXTURE" DB_PASSWORD)" = 'not-a-real-secret' ]
 
 PROJECT_FIXTURE="$TMP_DIR/project"
-mkdir -p "$PROJECT_FIXTURE/config" "$PROJECT_FIXTURE/server-binaries/enhanced-linux-139/alpine/opt/cfx-server" "$PROJECT_FIXTURE/txData"
+PINNED_BUILD="$(read_fxserver_manifest_value "$ROOT_DIR/config/fxserver-linux-artifact.json" build)"
+[[ "$PINNED_BUILD" =~ ^[0-9]+$ ]]
+PINNED_DIR="$PROJECT_FIXTURE/server-binaries/enhanced-linux-$PINNED_BUILD"
+mkdir -p "$PROJECT_FIXTURE/config" "$PINNED_DIR/alpine/opt/cfx-server" "$PROJECT_FIXTURE/txData"
 cp "$ROOT_DIR/config/fxserver-linux-artifact.json" "$PROJECT_FIXTURE/config/fxserver-linux-artifact.json"
-printf '#!/usr/bin/env bash\n' > "$PROJECT_FIXTURE/server-binaries/enhanced-linux-139/run.sh"
-printf '#!/usr/bin/env bash\n' > "$PROJECT_FIXTURE/server-binaries/enhanced-linux-139/alpine/opt/cfx-server/cfx-server"
-printf '%s\n' 'build=139' 'channel=enhanced' > "$PROJECT_FIXTURE/server-binaries/enhanced-linux-139/INSTALL-MANIFEST.txt"
-chmod +x "$PROJECT_FIXTURE/server-binaries/enhanced-linux-139/run.sh" "$PROJECT_FIXTURE/server-binaries/enhanced-linux-139/alpine/opt/cfx-server/cfx-server"
-ln -s enhanced-linux-139 "$PROJECT_FIXTURE/server-binaries/enhanced-129"
+printf '#!/usr/bin/env bash\n' > "$PINNED_DIR/run.sh"
+printf '#!/usr/bin/env bash\n' > "$PINNED_DIR/alpine/opt/cfx-server/cfx-server"
+printf '%s\n' "build=$PINNED_BUILD" 'channel=enhanced' > "$PINNED_DIR/INSTALL-MANIFEST.txt"
+chmod +x "$PINNED_DIR/run.sh" "$PINNED_DIR/alpine/opt/cfx-server/cfx-server"
+# enhanced-129 is the existing stable launcher alias, not the selected build.
+ln -s "enhanced-linux-$PINNED_BUILD" "$PROJECT_FIXTURE/server-binaries/enhanced-129"
 
 if [ -L "$PROJECT_FIXTURE/server-binaries/enhanced-129" ]; then
   artifact_result="$(validate_pinned_fxserver_linux_artifact "$PROJECT_FIXTURE" "$PROJECT_FIXTURE/server-binaries/enhanced-129/run.sh")"
-  [ "$artifact_result" = "139|$PROJECT_FIXTURE/server-binaries/enhanced-129/run.sh|verified" ]
+  [ "$artifact_result" = "$PINNED_BUILD|$PROJECT_FIXTURE/server-binaries/enhanced-129/run.sh|verified" ]
 else
   # Git Bash without Windows symlink privileges cannot reproduce a Unix link;
   # Linux/CI exercises the exact compatibility-link branch.
-  rm -rf -- "$PROJECT_FIXTURE/server-binaries/enhanced-129"
-  cp -R "$PROJECT_FIXTURE/server-binaries/enhanced-linux-139" "$PROJECT_FIXTURE/server-binaries/enhanced-129"
-  artifact_result="$(validate_pinned_fxserver_linux_artifact "$PROJECT_FIXTURE" "$PROJECT_FIXTURE/server-binaries/enhanced-linux-139/run.sh")"
-  [ "$artifact_result" = "139|$PROJECT_FIXTURE/server-binaries/enhanced-linux-139/run.sh|verified" ]
+  # Git Bash may emulate ln by copying the directory; retain that fixture.
+  test -x "$PROJECT_FIXTURE/server-binaries/enhanced-129/run.sh"
+  artifact_result="$(validate_pinned_fxserver_linux_artifact "$PROJECT_FIXTURE" "$PINNED_DIR/run.sh")"
+  [ "$artifact_result" = "$PINNED_BUILD|$PINNED_DIR/run.sh|verified" ]
   printf 'Linux compatibility-symlink assertion skipped: host cannot create symbolic links\n'
 fi
 

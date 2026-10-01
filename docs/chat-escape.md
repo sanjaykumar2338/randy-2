@@ -1,5 +1,29 @@
 # Chat Escape dismissal
 
+## Current acceptance update - 2026-10-01
+
+**ESTABLISHED LIVE PASS (user-reported):** `tarrant_chat` is deployed on Enhanced
+b156; T -> ESC immediately removes chat input/background on the tested live
+client; chat reopens and works afterward. These are the operator's confirmed
+results supplied for this milestone, not a new session performed by the agent.
+**Randy-specific chat acceptance remains PENDING LIVE.**
+
+The browser/Lua suite was rerun successfully on 2026-10-01 against the available
+unmodified Enhanced Windows b129 bundle, with the hashes listed below. This
+verifies cancellation, incoming messages/fade, reopen/send, empty Enter/commands,
+visibility preferences and theme lifecycle with stubbed FiveM natives. The
+deployed Linux b156 bundle was not available for automated comparison; no bundle
+equivalence or new b156 client acceptance is claimed.
+
+Use the [Randy checklist and evidence template](launch-readiness.md#operator-checklist-randy-chat-and-protected-regression).
+Stop for the chat component and document any failure; do not modify the accepted
+extension or stock chat automatically. No chat resource, bindings, runtime config
+or VPS was changed in this milestone. No deployment or restart was performed.
+The older deployment/rollback instructions below are historical runbooks and
+must not be executed as part of the launch baseline acceptance milestone.
+
+## Implementation
+
 `tarrant_chat` uses stock chat's `chat_theme` script/stylesheet extension. It
 temporarily hides `.chat-window` when Escape is released on the visible chat
 textarea. The event continues to stock chat, which cancels the draft and invokes

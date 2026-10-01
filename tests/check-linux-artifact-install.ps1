@@ -13,7 +13,8 @@ $stagingEnvironment = [IO.File]::ReadAllText($stagingEnvironmentPath)
 $checks = @(
     @{ Name='Enhanced Linux product'; Pass=$manifest.product -eq 'FiveM for GTAV Enhanced Cfx Server for Linux x64' },
     @{ Name='Enhanced channel'; Pass=$manifest.channel -eq 'enhanced' },
-    @{ Name='pinned Enhanced build'; Pass=$manifest.build -eq 139 },
+    # Explicit approval guard; the deployment fixture derives its paths from this manifest.
+    @{ Name='approved Enhanced build 156'; Pass=$manifest.build -eq 156 },
     @{ Name='official Enhanced Linux source'; Pass=$manifest.officialSource -match '^https://downloads\.cfx-services\.net/prod/[0-9a-f-]+/cfx-server_linux_x64\.tar\.xz$' },
     @{ Name='archive checksum'; Pass=$manifest.archiveSha256 -match '^[A-F0-9]{64}$' },
     @{ Name='Linux launcher'; Pass=$manifest.launcher -eq 'run.sh' },

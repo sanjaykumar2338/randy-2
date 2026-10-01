@@ -1,5 +1,43 @@
 # Phase 2 gameplay/economy baseline
 
+## Current acceptance update - 2026-10-01
+
+The operator has confirmed live Enhanced b156 Sanitation two-stop completion
+and exactly $90 cash, plus character/money/inventory persistence and civilian
+hospital recovery with retained assets. **Sanitation: ESTABLISHED LIVE PASS
+(user-reported). Delivery and Transit: PENDING LIVE.** No new live gameplay was
+performed by the agent during the launch baseline milestone.
+
+Fresh employment server/client, medical and world mocked tests pass. Artifact,
+dependency, listing and environment-isolation tests pass, with the real Linux
+symlink assertion skipped on Windows. The local health-log fixture still fails
+because it depends on unavailable local FXServer/txAdmin services; the old local
+startup log also lacks current medical readiness. This is not VPS evidence.
+
+The exact route procedures, negative cases and acceptance records are in
+[Launch baseline acceptance](launch-readiness.md#operator-checklist-jobs).
+Delivery: (120.8,-926.0,29.8) then (24.5,-1346.3,29.5).
+Transit: (115.3,-784.1,31.4) then (141.8,-1028.4,29.4).
+Both pay $90 cash only after two 13-second client actions; separate QBX bank
+payroll is not route pay. No employment implementation changes were made.
+
+For spending, use the inspected local OX General shop 1 at
+(25.7,-1347.3,29.49), target (25.06,-1347.32,29.5). Burger, Water and Sprunk
+each have a $10 **base** price. Local `inventory:randomprices=true` produces
+$8-$12 displayed prices, so record actual displayed prices before asserting
+deductions. Live OX configuration equivalence has not been verified. See the
+[exact shop/use/rejection checklist](launch-readiness.md#operator-checklist-exact-ox-shop-and-consumables).
+Earn/purchase/consume/reconnect and funds/capacity rejection remain PENDING LIVE.
+The same randomization warning applies to the historical shop base prices below;
+the separately configured $5,000 license fee is not a randomized shop-item price.
+
+If gameplay acceptance fails, stop for that component, record expected/observed
+behavior and request a separate scoped fix. This milestone changes no gameplay,
+database, configuration, artifact, or VPS and performs no deployment/restart.
+Historical deployment commands below are not instructions for this milestone.
+
+## Historical implementation record - 2026-09-14
+
 Prepared 2026-09-14. Source implementation is ready for staging; **Jobs: PARTIAL;
 Weapon purchasing: PARTIAL; Real estate: PLAN REQUIRED**. No live deployment or
 in-game acceptance is claimed. The local runtime differs from Randy's live VPS:
