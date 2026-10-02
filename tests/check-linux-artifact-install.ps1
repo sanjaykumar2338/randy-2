@@ -14,9 +14,9 @@ $checks = @(
     @{ Name='Enhanced Linux product'; Pass=$manifest.product -eq 'FiveM for GTAV Enhanced Cfx Server for Linux x64' },
     @{ Name='Enhanced channel'; Pass=$manifest.channel -eq 'enhanced' },
     # Explicit approval guard; the deployment fixture derives its paths from this manifest.
-    @{ Name='approved Enhanced build 156'; Pass=$manifest.build -eq 156 },
-    @{ Name='official Enhanced Linux source'; Pass=$manifest.officialSource -match '^https://downloads\.cfx-services\.net/prod/[0-9a-f-]+/cfx-server_linux_x64\.tar\.xz$' },
-    @{ Name='archive checksum'; Pass=$manifest.archiveSha256 -match '^[A-F0-9]{64}$' },
+    @{ Name='approved Enhanced build 161'; Pass=$manifest.build -eq 161 },
+    @{ Name='official Enhanced Linux source'; Pass=$manifest.officialSource -eq 'https://downloads.cfx-services.net/prod/01a0f7ee-dfa5-7d23-a7a4-86de1b40d6f1/cfx-server_linux_x64.tar.xz' },
+    @{ Name='approved archive checksum'; Pass=$manifest.archiveSha256 -eq 'C7F407D1A9592B842FA764D121BD74D5AF6C75AEB973529D9FB4289BB1E4B359' },
     @{ Name='Linux launcher'; Pass=$manifest.launcher -eq 'run.sh' },
     @{ Name='Enhanced Linux executable'; Pass=$manifest.executable -eq 'alpine/opt/cfx-server/cfx-server' },
     @{ Name='side-by-side destination'; Pass=$installer -match 'server-binaries/enhanced-linux-\$BUILD' },

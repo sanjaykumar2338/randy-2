@@ -1,6 +1,6 @@
 # Chat Escape dismissal
 
-## Current acceptance update - 2026-10-01
+## Current acceptance update - 2026-10-02
 
 **ESTABLISHED LIVE PASS (user-reported):** `tarrant_chat` is deployed on Enhanced
 b156; T -> ESC immediately removes chat input/background on the tested live
@@ -8,12 +8,13 @@ client; chat reopens and works afterward. These are the operator's confirmed
 results supplied for this milestone, not a new session performed by the agent.
 **Randy-specific chat acceptance remains PENDING LIVE.**
 
-The browser/Lua suite was rerun successfully on 2026-10-01 against the available
-unmodified Enhanced Windows b129 bundle, with the hashes listed below. This
+The browser/Lua suite was rerun successfully on 2026-10-02 against the actual
+unmodified Enhanced Linux b161 bundle, with the hashes listed below. This
 verifies cancellation, incoming messages/fade, reopen/send, empty Enter/commands,
 visibility preferences and theme lifecycle with stubbed FiveM natives. The
-deployed Linux b156 bundle was not available for automated comparison; no bundle
-equivalence or new b156 client acceptance is claimed.
+b161 `cl_chat.lua` and `dist/chat.js` hashes are identical to the previously
+approved stock hashes. This is automated bundle compatibility evidence, not live
+b161 client acceptance.
 
 Use the [Randy checklist and evidence template](launch-readiness.md#operator-checklist-randy-chat-and-protected-regression).
 Stop for the chat component and document any failure; do not modify the accepted
@@ -64,8 +65,8 @@ On another machine, `--chat` accepts a different bundle directory and `--browser
 accepts a Chromium executable. Python Playwright and lupa may alternatively be
 installed in an isolated virtual environment.
 
-Passed against the available Enhanced Windows b129 chat bundle (also identical
-to the available b127-clean and legacy bundle for these two files):
+Passed against the official Enhanced Linux b161 chat bundle (also identical to
+the previously approved stock bundle for these two files):
 
 | File | SHA-256 |
 | --- | --- |
@@ -75,7 +76,7 @@ to the available b127-clean and legacy bundle for these two files):
 Checks cover T/release -> Escape, typed draft cancellation, incoming message
 after Escape and automatic fading, reopening, message/command submission, empty
 Enter, unchanged persisted modes, focus-release callback, theme reload, and
-theme removal. The deployed Linux b156 bundle was not available for comparison.
+theme removal. Live b161 T -> ESC acceptance remains pending after deployment.
 
 ## Backup-first Linux deployment (operator instructions only)
 

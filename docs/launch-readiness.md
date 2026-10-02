@@ -1,13 +1,14 @@
 # Launch baseline acceptance ledger
 
-Updated 2026-10-01. Milestone: **Three Jobs, Spend/Consume, Two-Player Voice,
+Updated 2026-10-02. Milestone: **Three Jobs, Spend/Consume, Two-Player Voice,
 and Protected-System Regression**. Status: **automated/documentation delivery
 complete; live acceptance incomplete**. This is not a launch approval.
 
-Only the two artifact/deployment tests and three authorized documentation files
-are changed. No gameplay resource, active server configuration, database,
-artifact manifest/binary, or VPS was modified. Nothing was deployed or restarted.
-Test fixtures and a temporary headless browser profile are local only.
+This runtime update changes only the Enhanced Linux artifact manifest, its
+explicit approval test, and artifact/deployment acceptance documentation. No
+gameplay resource, active server configuration, database, downloaded artifact
+binary, or VPS was modified. Nothing was deployed or restarted. The official
+b161 archive and extracted chat test fixture are local ignored files only.
 
 ## Evidence rules and environment
 
@@ -20,8 +21,11 @@ Test fixtures and a temporary headless browser profile are local only.
 - **FAIL / ENVIRONMENT BLOCKED**: retain the actual failure; never convert to PASS
   because code exists or an older session passed.
 
-Audited source baseline: `5909d8ee773431d3fe484a863c14fa7b23451dac`.
-The approved Linux manifest pins Enhanced **156** and remains unchanged.
+Audited source baseline: `28ff6dac4d35733d5b52e150cc57af45b4691e7a`.
+The approved Linux manifest now pins Enhanced **161**. Enhanced b156 was the
+previously accepted live runtime, but FiveM now requires b161 for Enhanced client
+connections. **Live b161 acceptance remains PENDING LIVE** until the controlled
+VPS deployment and the runtime/gameplay checks below are completed.
 The ignored local `runtime/qbox-server-data` is older than the reported VPS.
 Its OX/voice values below are the exact inspected local values, not a claim that
 the current VPS has identical configuration. Live deployed HEAD, resource hashes,
@@ -57,8 +61,8 @@ provided here. Preserve these results; they are not new tests by this agent.
 | Test/command | Result | Evidence boundary |
 | --- | --- | --- |
 | `python -B tests/run-economy-lua.py` | AUTOMATED PASS | Six Lua suites: employment server, world, medical server, medical client, medical surface, employment client marker. QBX/OX/native behavior mocked; no real balances or players. |
-| `python -B tests/check-chat-cancel.py --chat server-binaries/enhanced-129-test/system_resources/chat --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"` | AUTOMATED PASS | Actual available b129 bundled UI and Lua callbacks in Chromium/Lupa; FiveM natives stubbed. Not a b156 bundle equivalence test. |
-| `tests/check-linux-artifact-install.ps1` | AUTOMATED PASS | Approved b156 pin, product/channel/source/checksum shape/layout and installer safeguards; no archive downloaded or installed. |
+| `python -B tests/check-chat-cancel.py --chat runtime/b161-audit/extract/alpine/opt/cfx-server/system_resources/chat --browser "C:/Program Files/Google/Chrome/Application/chrome.exe"` | AUTOMATED PASS | Actual official b161 bundled UI and Lua callbacks in Chromium/Lupa; FiveM natives stubbed. Both stock chat hashes equal the previously approved values. |
+| `tests/check-linux-artifact-install.ps1` | AUTOMATED PASS | Approved b161 pin, exact official source/checksum, layout and installer safeguards. |
 | `tests/check-runtime-dependencies.ps1` | AUTOMATED PASS | Startup ordering, voice pin, configuration/environment safeguards. |
 | `tests/check-public-listing-config.ps1` | AUTOMATED PASS | Directive classification and template checks; not current Cfx listing evidence. |
 | `tests/check-linux-hosted-deployment.sh` | AUTOMATED PASS with SKIP | Git Bash fixture paths/metadata now derive from the approved manifest; arbitrary-launcher rejection and service/env checks retained. Real Linux compatibility-symlink branch SKIPPED: host cannot create symbolic links. |
@@ -74,7 +78,8 @@ were executed. The health component remains stopped for this milestone: do not
 alter/start it to manufacture a passing result. This is an environment-dependent
 test failure, not an observed medical gameplay failure.
 
-The corrected PowerShell test keeps an explicit approval guard for build 156.
+The PowerShell test keeps an explicit approval guard for build 161 and its exact
+official source URL and independently calculated archive SHA-256.
 The Bash fixture reads that manifest's build for directory names, install metadata
 and expected output. `enhanced-129` remains the existing stable launcher alias;
 it does not select build 129. Manifest/installer validation and rejection behavior
@@ -84,10 +89,10 @@ are unchanged.
 
 | Earlier evidence | Current limitation |
 | --- | --- |
-| Windows Phase 1 restart/reconnect and isolated backup restore in `week3-phase1-completion.md` | Does not certify the current Linux b156 deployment. |
+| Windows Phase 1 restart/reconnect and isolated backup restore in `week3-phase1-completion.md` | Does not certify the current Linux b161 candidate. |
 | Linux b139 controlled restart in `phase1-final-acceptance.md` | Not the current full-resource restart/persistence test. |
 | Earlier economy/world fixture passes | Superseded by fresh relevant automated results above; live checklist remains separate. |
-| Earlier chat b129 browser test | Freshly rerun here with the same bundle hashes; deployed b156 bundle unavailable for automated comparison. |
+| Earlier chat b129 browser test | Superseded by the successful test against the actual b161 Linux bundle; its two stock hashes remain identical. |
 
 ## Pending live acceptance register
 
@@ -95,6 +100,7 @@ No rows below have been performed by this agent. All remain **PENDING LIVE**.
 
 | ID | Test | Completion evidence required |
 | --- | --- | --- |
+| ART-161 | Controlled Enhanced b161 deployment | txAdmin reports b161; service starts; MariaDB/oxmysql connects; required resources, `tarrant_medical` and `tarrant_chat` start; Enhanced client connects and loads the character; inventory/HUD, T -> ESC dismissal and hospital recovery regressions pass. Preserve b156 until complete. |
 | JOB-D | Delivery two-stop route | Coordinates/markers, both actions, balances before/after each stop, one $90 payment. |
 | JOB-T | Transit two-stop route | Same, using Transit stops and action text. |
 | JOB-N | Employment negative/lifecycle checks | Cancel/retry, duplicate input, invalid stop, reconnect, end shift; no unearned money. |

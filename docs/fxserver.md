@@ -2,7 +2,7 @@
 
 The original local Phase 1 gameplay acceptance used Enhanced FXServer `b127`. Legacy artifact `25770` is a different, non-Enhanced line and is not the deployment target. Because Cfx no longer exposes b127 through its official resolver, the tracked Windows artifact manifest pins official Enhanced `b129`, which passed the full server-side Phase 1 readiness suite on 2026-08-24.
 
-FiveM for GTAV Enhanced uses a separate Cfx Server product line. The official download page currently offers Enhanced Linux `cfx-server_linux_x64.tar.xz` build `139`; legacy Linux `fx.tar.xz` master build `35245` is not the Enhanced package even though both can report familiar FXServer metadata. `config/fxserver-linux-artifact.json` pins the official Enhanced Linux build 139 URL and verified checksum as of 2026-09-02. Re-check the official Server Download page before deliberately selecting a later Enhanced build. Archives and extracted binaries remain ignored.
+FiveM for GTAV Enhanced uses a separate Cfx Server product line. On 2026-10-02 the official download page offered Enhanced Linux `cfx-server_linux_x64.tar.xz` build `161`; legacy Linux `fx.tar.xz` is not the Enhanced package even though both can report familiar FXServer metadata. `config/fxserver-linux-artifact.json` pins the official Enhanced Linux b161 URL and independently calculated SHA-256. Enhanced b156 was previously accepted, but FiveM now requires b161 for client connections; live b161 acceptance remains pending until the controlled VPS deployment and checks. Archives and extracted binaries remain ignored.
 
 Official references:
 

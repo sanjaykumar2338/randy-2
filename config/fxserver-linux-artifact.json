@@ -1,12 +1,12 @@
 {
   "product": "FiveM for GTAV Enhanced Cfx Server for Linux x64",
   "channel": "enhanced",
-  "build": 156,
+  "build": 161,
   "archiveName": "cfx-server_linux_x64.tar.xz",
-  "officialSource": "https://downloads.cfx-services.net/prod/01a0d46a-747b-71a1-a8aa-5e8e5b9e9b28/cfx-server_linux_x64.tar.xz",
-  "archiveSha256": "B55595183D6797B09856218816D67BB9A50DEDE1845DB09F7DC5CA6FCA884906",
+  "officialSource": "https://downloads.cfx-services.net/prod/01a0f7ee-dfa5-7d23-a7a4-86de1b40d6f1/cfx-server_linux_x64.tar.xz",
+  "archiveSha256": "C7F407D1A9592B842FA764D121BD74D5AF6C75AEB973529D9FB4289BB1E4B359",
   "launcher": "run.sh",
   "executable": "alpine/opt/cfx-server/cfx-server",
-  "verifiedOn": "2026-09-26",
-  "notes": "Pinned from the FiveM for GTAV Enhanced Linux selection at https://docs.fivem.net/docs/server-download/ (Enhanced build 156, not Legacy). SHA-256 independently calculated from the official archive. September 22 protocol changes require an updated server for client connections (https://github.com/citizenfx/rfc/discussions/530); patch redeployed September 23, followed by the September 24 hotfix (https://github.com/citizenfx/rfc/discussions/545). Keep enhanced-linux-139 for rollback; install side-by-side before switching the stable launcher symlink."
+  "verifiedOn": "2026-10-02",
+  "notes": "Pinned from the FiveM for GTAV Enhanced Linux selection at https://docs.fivem.net/docs/server-download/ (Enhanced build 161, not Legacy). SHA-256 independently calculated from the official archive. FiveM now requires b161 for Enhanced client connections. Build 156 was previously accepted and must remain installed as the rollback target; install b161 side-by-side and verify it before switching the stable enhanced-129 launcher symlink."
 }
